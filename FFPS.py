@@ -25,23 +25,23 @@ def median_filter(data, r, R, m, n):
                 # edge cases
                 if i < r:
                     i_start = 0
-                    i_end = i + r
-                elif i > m - r:
+                    i_end = i + r + 1
+                elif i >= m - r:
                     i_start = i - r
                     i_end = m
                 else:
                     i_start = i - r
-                    i_end = i + r
+                    i_end = i + r + 1
 
                 if j < r:
                     j_start = 0
-                    j_end = j + r
-                elif j > n - r:
+                    j_end = j + r + 1
+                elif j >= n - r:
                     j_start = j - r
                     j_end = n
                 else:
                     j_start = j - r
-                    j_end = j + r
+                    j_end = j + r + 1
 
                 # median
                 filter_submatrix = data[i_start:i_end, j_start:j_end]
