@@ -67,6 +67,7 @@ def median_filter(data, r, R, m, n):
 
 
 def rescale(f):
+    # TODO proc je L_max jine nez v matlabu
     L_min = np.min(f)
     L_max = np.max(f)
     g = (f - L_min) / (L_max - L_min)
@@ -122,8 +123,8 @@ def fit2dPolySVD(x, y, z, order):
     A = np.zeros((numVals, numCoeffs))
 
     column = 0
-    for xpower in range(order):
-        for ypower in range(order - xpower):
+    for xpower in range(order + 1):
+        for ypower in range(order - xpower + 1):
             A[:, column] = xs**xpower * ys**ypower
             column += 1
 
@@ -146,9 +147,9 @@ def fit2dPolySVD(x, y, z, order):
     coeffs = np.dot(np.dot(v, qqs.transpose()), np.dot(u, zs))
 
     # scale the coefficients so they are correct for the unscaled data
-    column = 1
-    for xpower in range(order):
-        for ypower in range(order - xpower):
+    column = 0
+    for xpower in range(order+1):
+        for ypower in range(order - xpower+1):
             coeffs[column] = (
                 coeffs[column] * scalex**xpower * scaley**ypower / scalez
             )
@@ -177,13 +178,14 @@ def eval2dPoly(x, y, coeffs):
 
         numVals = len(x)
 
+    # TODO ocekovat, velikost x by logicky mela byt 1 v prve dimenzi
     numVals = 1
     order = int(0.5 * (np.sqrt(8 * len(coeffs) + 1) - 3))
 
     zbar = np.zeros(numVals)
-    column = 1
-    for xpower in range(order):
-        for ypower in range(order - xpower):
+    column = 0
+    for xpower in range(order+1):
+        for ypower in range(order - xpower+1):
             zbar += coeffs[column] * x**xpower * y**ypower
             column += 1
 
@@ -233,7 +235,6 @@ def frequency_filter(A_shift, P, r1, r2, t):
         for j in range(len(xx)):
             A_shift_filtered[xx[j], yy[j]] = eval2dPoly(xx[j], yy[j], f)[0]
 
-    A_shift_filtered == A_shift
     return A_shift_filtered
 
 
@@ -246,7 +247,8 @@ with fits.open(filename) as hdul:
     m, n = data.shape
     f = median_filter(data, r, R, m, n)
     f = gamma_correction(f, gamma)
-    F_shift = np.fft.fftshift(np.fft.fft2(f))
+    F = np.fft.fft2(f)
+    F_shift = np.fft.fftshift(F)
 
     A_shift = np.abs(F_shift)
 
@@ -283,6 +285,7 @@ with fits.open(filename) as hdul:
     H = A_shift_filtered / A_shift
 
     # weight function mirrorring
+    # TODO dát pozor na H
     for i in range(m):
         for j in range(n - i):
             H[m - i - 1, n - j - 1] = H[i, j]
@@ -293,7 +296,8 @@ with fits.open(filename) as hdul:
     # inverse Fourier transform
     G = np.fft.ifftshift(G_shift)
     g = np.fft.ifft2(G)
-    g = rescale(np.real(g))
+    # g = rescale(np.real(g))
+    g = rescale(np.abs(g))
 
     # Visualization
     # subplot(1,2,1), imshow(f), title("Původní snímek")
@@ -304,4 +308,4 @@ with fits.open(filename) as hdul:
     ax1.imshow(f, cmap="gray")
     ax2.imshow(g, cmap="gray")
     plt.show()
-    print()
+    input()
