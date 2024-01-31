@@ -3,7 +3,7 @@ from scipy.io import loadmat
 import numpy as np
 import matplotlib.pyplot as plt
 
-filename = "07012022_304.fits"  # filename
+filename = "28031999_195.fits"
 r = 2
 R = 1.07
 # median filter parameters
@@ -67,7 +67,6 @@ def median_filter(data, r, R, m, n):
 
 
 def rescale(f):
-    # TODO proc je L_max jine nez v matlabu
     L_min = np.min(f)
     L_max = np.max(f)
     g = (f - L_min) / (L_max - L_min)
@@ -81,7 +80,7 @@ def gamma_correction(f, gamma):
 
 
 def fit2dPolySVD(x, y, z, order):
-    # zdroj: WHITEHEAD, R. 2D polynomial fitting with SVD. MATLAB Central File Exchange [online]. 2011 [cit. 2023-02-28].
+    # source: WHITEHEAD, R. 2D polynomial fitting with SVD. MATLAB Central File Exchange [online]. 2011 [cit. 2023-02-28].
     # Dostupné z: https://www.mathworks.com/matlabcentral/fileexchange/31636-2d-polynomial-fitting-with-svd
     # Fit a polynomial f(x,y) so that it provides a best fit
     # to the data z.
@@ -130,7 +129,7 @@ def fit2dPolySVD(x, y, z, order):
 
     # Perform SVD
     [u, s, v] = np.linalg.svd(A)
-
+    v = v.transpose()
     # pseudo-inverse of diagonal matrix s
     eps = np.finfo(np.double).eps
     sigma = eps ** (1 / order)  # minimum value considered non-zero
