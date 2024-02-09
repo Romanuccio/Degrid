@@ -3,17 +3,6 @@ from scipy.io import loadmat
 import numpy as np
 import matplotlib.pyplot as plt
 
-filename = "28031999_195.fits"
-r = 2
-R = 1.07
-# median filter parameters
-gamma = 1.7
-# gamma correction parameter
-r1 = 10
-r2 = 15
-t = 1.0
-# frequency filter parameters
-
 
 def median_filter(data, r, R, m, n):
     f = np.empty_like(data)
@@ -129,7 +118,7 @@ def fit2dPolySVD(x, y, z, order):
 
     # Perform SVD
     [u, s, v] = np.linalg.svd(A)
-    v = v.transpose()
+    v = v.conj().T
     # pseudo-inverse of diagonal matrix s
     eps = np.finfo(np.double).eps
     sigma = eps ** (1 / order)  # minimum value considered non-zero
@@ -165,7 +154,7 @@ def eval2dPoly(x, y, coeffs):
     # The vectors must be the same length.
     # Coeffs is the coefficients array returned by fit2dPolySVD.
 
-    if type(x) == np.array or type(y) == np.array:
+    if isinstance(x, np.ndarray) or isinstance(y, np.ndarray):
         if x.ndim > 1 or y.ndim > 1:
             if np.min(x.shape) > 1 or np.min(y.shape) > 1:
                 print("Inputs of fit2dPolySVD must be column vectors")
@@ -177,7 +166,6 @@ def eval2dPoly(x, y, coeffs):
 
         numVals = len(x)
 
-    # TODO ocekovat, velikost x by logicky mela byt 1 v prve dimenzi
     numVals = 1
     order = int(0.5 * (np.sqrt(8 * len(coeffs) + 1) - 3))
 
@@ -236,75 +224,78 @@ def frequency_filter(A_shift, P, r1, r2, t):
 
     return A_shift_filtered
 
+# #filename = "28031999_195.fits"
+# r = 2
+# R = 1.07
+# # median filter parameters
+# gamma = 1.7
+# # gamma correction parameter
+# r1 = 10
+# r2 = 15
+# t = 1.0
+# # frequency filter parameters
 
-# read FITS file
-with fits.open(filename) as hdul:
-    data = hdul[0].data
+def process_image(filename, r, R, gamma, r1, r2, t):
+    """Reads and processes an image."""
+    with fits.open(filename) as hdul:
+        data = hdul[0].data
 
-    # select subset of data
-    data = data[2:1022, 2:1022]
-    m, n = data.shape
-    f = median_filter(data, r, R, m, n)
-    f = gamma_correction(f, gamma)
-    F = np.fft.fft2(f)
-    F_shift = np.fft.fftshift(F)
+        # select subset of data
+        data = data[2:1022, 2:1022]
+        m, n = data.shape
+        f = median_filter(data, r, R, m, n)
+        F = np.fft.fft2(f)
+        F_shift = np.fft.fftshift(F)
 
-    A_shift = np.abs(F_shift)
+        A_shift = np.abs(F_shift)
 
-    # spectrum plotting
-    # fig, ax = plt.subplots(1, 1)
-    # ax.set_aspect("equal")
-    # ax.grid(False)
-    # ax.imshow(np.log(A_shift + 1), cmap="gray")
-    # plt.show()
+        # determine local maxima
+        tmp = loadmat("P.mat")
+        tmp = tmp["P"]
+        P = np.empty((0, 2), int)
+        for i in range(tmp.shape[0]):
+            sx = tmp[i, 0]
+            sy = tmp[i, 1]
+            value = A_shift[sx, sy]
+            a = sx
+            b = sy
+            for j in range(-10, 11):
+                for k in range(-10, 11):
+                    if (j - sx) ** 2 + (k - sy) ** 2 < 100 and A_shift[j, k] > value:
+                        value = A_shift[j, k]
+                        a = j
+                        b = k
+            P = np.append(P, np.array([[a, b]]), axis=0)
 
-    # TODO change reading of matlab file containing predetermined local maxima
-    # determine local maxima
-    tmp = loadmat("P.mat")
-    tmp = tmp["P"]
-    P = np.empty((0, 2), int)
-    for i in range(tmp.shape[0]):
-        sx = tmp[i, 0]
-        sy = tmp[i, 1]
-        value = A_shift[sx, sy]
-        a = sx
-        b = sy
-        for j in range(-10, 11):
-            for k in range(-10, 11):
-                if (j - sx) ** 2 + (k - sy) ** 2 < 100 and A_shift[j, k] > value:
-                    value = A_shift[j, k]
-                    a = j
-                    b = k
-        P = np.append(P, np.array([[a, b]]), axis=0)
+        # Filtering
+        A_shift_filtered = frequency_filter(A_shift, P, r1, r2, t)
 
-    # Filtering
-    A_shift_filtered = frequency_filter(A_shift, P, r1, r2, t)
+        # weight function
+        H = A_shift_filtered / A_shift
 
-    # weight function
-    H = A_shift_filtered / A_shift
+        # weight function mirrorring
+        for i in range(m):
+            for j in range(n - i):
+                H[m - i - 1, n - j - 1] = H[i, j]
 
-    # weight function mirrorring
-    # TODO dát pozor na H
-    for i in range(m):
-        for j in range(n - i):
-            H[m - i - 1, n - j - 1] = H[i, j]
+        # Fourier spectrum filtering
+        G_shift = F_shift * H
 
-    # Fourier spectrum filtering
-    G_shift = F_shift * H
+        # inverse Fourier transform
+        G = np.fft.ifftshift(G_shift)
+        g = np.fft.ifft2(G)
+        # g = rescale(np.real(g))
+        g = rescale(np.abs(g))
+        # gamma correction
+        g = gamma_correction(g, gamma)
 
-    # inverse Fourier transform
-    G = np.fft.ifftshift(G_shift)
-    g = np.fft.ifft2(G)
-    # g = rescale(np.real(g))
-    g = rescale(np.abs(g))
-
-    # Visualization
-    # subplot(1,2,1), imshow(f), title("Původní snímek")
-    # subplot(1,2,2), imshow(g), title("Snímek po odstranění mřížky metodou FFPS")
-    # f = gamma_correction(f, gamma)
-    # g = gamma_correction(g, gamma)
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    ax1.imshow(f, cmap="gray")
-    ax2.imshow(g, cmap="gray")
-    plt.show()
-    input()
+        # Visualization
+        # subplot(1,2,1), imshow(f), title("Původní snímek")
+        # subplot(1,2,2), imshow(g), title("Snímek po odstranění mřížky metodou FFPS")
+        # f = gamma_correction(f, gamma)
+        # g = gamma_correction(g, gamma)
+        # fig, (ax1, ax2) = plt.subplots(1, 2)
+        # ax1.imshow(f, cmap="gray")
+        # ax2.imshow(g, cmap="gray")
+        # plt.show()
+        # input()
