@@ -1,6 +1,8 @@
 import sys
 from PyQt6.QtWidgets import *
 import PyQt6.QtCore as QtCore
+import FFPS
+from astropy.io import fits
 
 class ParameterWidget(QWidget):
     """Widget containing parameters for processing."""
@@ -28,13 +30,13 @@ class ParameterWidget(QWidget):
             value_lineedit = QLineEdit(str(value), self)
             value_lineedit.key = key
             line_layout.addWidget(value_lineedit)
-            # TODO lambda scope evaluates only for last iteration
-            value_lineedit.textEdited.connect(lambda: self.parameter_lineedit_value_changed(value_lineedit.key))
+            value_lineedit.textEdited.connect(self.parameter_lineedit_value_changed)
             layout.addLayout(line_layout)
     
     @QtCore.pyqtSlot()
-    def parameter_lineedit_value_changed(self, text, key):
-        print(self)
+    def parameter_lineedit_value_changed(self):
+        # changes value of FFPS parameter in dictionary of parameters widget
+        self.parameters[self.sender().key] = self.sender().text()
             
         
 
@@ -59,15 +61,19 @@ class MainWindow(QMainWindow):
         self.files_to_process_listwidget = QListWidget(self)
         # files button
         load_files_button = QPushButton("Add files", self)
-        load_files_button.clicked.connect(lambda: self.load_files_button_pressed(self.files_to_process_listwidget));
+        load_files_button.clicked.connect(lambda: self.load_files_button_pressed());
         # parameter widget
-        parameter_widget = ParameterWidget()
+        self.parameter_widget = ParameterWidget()
         
         
         # add widgets to page layout
         setup_layout.addWidget(load_files_button)
         setup_layout.addWidget(self.files_to_process_listwidget)
-        setup_layout.addWidget(parameter_widget)
+        setup_layout.addWidget(self.parameter_widget)
+        
+        process_button = QPushButton("Process", self)
+        process_button.clicked.connect(self.process_button_pressed)
+        setup_layout.addWidget(process_button)
         setup_page.setLayout(setup_layout)
         
         # view page
@@ -84,7 +90,7 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(tabwidget)
     
     @QtCore.pyqtSlot()
-    def load_files_button_pressed(self, filename_list_widget: QListWidget):
+    def load_files_button_pressed(self):
         """Loads unique .fits file filepaths."""
         file_dialog = QFileDialog(self)
         file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
@@ -93,11 +99,25 @@ class MainWindow(QMainWindow):
         filenames = file_dialog.selectedFiles()
         
         for filename in filenames:
-            if not filename_list_widget.findItems(filename, QtCore.Qt.MatchFlag.MatchExactly):
-                filename_list_widget.addItem(filename)
+            if not self.files_to_process_listwidget.findItems(filename, QtCore.Qt.MatchFlag.MatchExactly):
+                self.files_to_process_listwidget.addItem(filename)
         
-        filename_list_widget.sortItems()
+        self.files_to_process_listwidget.sortItems()
         
+    @QtCore.pyqtSlot()
+    def process_button_pressed(self):
+        r = self.parameter_widget.parameters['r']
+        R = self.parameter_widget.parameters['R']
+        gamma = self.parameter_widget.parameters['gamma']
+        r1 = self.parameter_widget.parameters['r1']
+        r2 = self.parameter_widget.parameters['r2']
+        t = self.parameter_widget.parameters['t']
+        processed_images = []
+        
+        files_to_process = [self.files_to_process_listwidget.item(x).text() for x in range(self.files_to_process_listwidget.count())]
+        for file_to_process in files_to_process:
+            # TODO change asdf to filepath in folder where program was run
+            processed_image = FFPS.process_image_and_save(filename= file_to_process, r=r, R=R, gamma=gamma, r1=r1, r2=r2, t=t, save_filepath="asdf")
 
 # create the QApplication
 app = QApplication([])

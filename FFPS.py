@@ -235,6 +235,11 @@ def frequency_filter(A_shift, P, r1, r2, t):
 # t = 1.0
 # # frequency filter parameters
 
+def process_image_and_save(filename, r, R, gamma, r1, r2, t, save_filepath):
+    processed_image = process_image(filename, r, R, gamma, r1, r2, t)
+    hdu = fits.PrimaryHDU(processed_image)
+    hdu.writeto("processed.fits")
+
 def process_image(filename, r, R, gamma, r1, r2, t):
     """Reads and processes an image."""
     with fits.open(filename) as hdul:
@@ -289,6 +294,7 @@ def process_image(filename, r, R, gamma, r1, r2, t):
         # gamma correction
         g = gamma_correction(g, gamma)
 
+        return g
         # Visualization
         # subplot(1,2,1), imshow(f), title("Původní snímek")
         # subplot(1,2,2), imshow(g), title("Snímek po odstranění mřížky metodou FFPS")
