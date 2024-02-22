@@ -236,9 +236,10 @@ def frequency_filter(A_shift, P, r1, r2, t):
 # # frequency filter parameters
 
 def process_image_and_save(filename, r, R, gamma, r1, r2, t, save_filepath):
+    # TODO pozor na data v souboru + novy obrazek je 1020x1020
     processed_image = process_image(filename, r, R, gamma, r1, r2, t)
     hdu = fits.PrimaryHDU(processed_image)
-    hdu.writeto("processed.fits")
+    hdu.writeto(filename + "_processed.fits")
 
 def process_image(filename, r, R, gamma, r1, r2, t):
     """Reads and processes an image."""

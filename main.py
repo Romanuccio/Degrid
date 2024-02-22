@@ -1,6 +1,10 @@
 import sys
 from PyQt6.QtWidgets import *
 import PyQt6.QtCore as QtCore
+import matplotlib
+matplotlib.use('QtAgg')
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
 import FFPS
 from astropy.io import fits
 
@@ -38,7 +42,6 @@ class ParameterWidget(QWidget):
         # changes value of FFPS parameter in dictionary of parameters widget
         self.parameters[self.sender().key] = self.sender().text()
             
-        
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -53,45 +56,87 @@ class MainWindow(QMainWindow):
         
         # tabs
         setup_page = QWidget(self)
-        view_page = QWidget(self)
+        setup_page.setMaximumWidth(1000)
+        # view_page = QWidget(self)
+        
+        columns_layout = QHBoxLayout()
         
         # setup page
         setup_layout = QVBoxLayout()
+        columns_layout.addLayout(setup_layout)
         # filename list
         self.files_to_process_listwidget = QListWidget(self)
+        # self.files_to_process_listwidget.itemClicked.connect(self.filelist_item_selected)
+        self.files_to_process_listwidget.currentItemChanged.connect(self.filelist_currentItemChanged)
+        
         # files button
         load_files_button = QPushButton("Add files", self)
-        load_files_button.clicked.connect(lambda: self.load_files_button_pressed());
+        load_files_button.clicked.connect(self.load_files_button_pressed);
         # parameter widget
         self.parameter_widget = ParameterWidget()
         
-        
         # add widgets to page layout
         setup_layout.addWidget(load_files_button)
+        
+        # clear files button
+        self.clear_button = QPushButton("Clear files", self)
+        self.clear_button.pressed.connect(self.clear_button_pressed)
+        setup_layout.addWidget(self.clear_button)
+        
         setup_layout.addWidget(self.files_to_process_listwidget)
         setup_layout.addWidget(self.parameter_widget)
         
         process_button = QPushButton("Process", self)
         process_button.clicked.connect(self.process_button_pressed)
         setup_layout.addWidget(process_button)
-        setup_page.setLayout(setup_layout)
+        setup_page.setLayout(columns_layout)
         
         # view page
-        view_layout = QVBoxLayout()
-        label2 = QLabel("Widget in Tab 2.")
-        view_layout.addWidget(label2)
-        view_page.setLayout(view_layout)
+        self.figure = Figure()
+        self.canvas = FigureCanvasQTAgg(self.figure)
+        columns_layout.addWidget(self.canvas)
+        
+        # view_layout = QVBoxLayout()
+        # label2 = QLabel("Widget in Tab 2.")
+        # view_layout.addWidget(label2)
+        # view_page.setLayout(view_layout)
         
         # create tab widget
-        tabwidget = QTabWidget(self)
-        tabwidget.addTab(setup_page, "Setup")
-        tabwidget.addTab(view_page, "Viewer")
+        # tabwidget = QTabWidget(self)
+        # tabwidget.addTab(setup_page, "Setup")
+        # tabwidget.addTab(view_page, "Viewer")
         
-        main_layout.addWidget(tabwidget)
+        main_layout.addWidget(setup_page)
+        
+    @QtCore.pyqtSlot()
+    def clear_button_pressed(self):
+        # clear plot
+        self.figure.clear()
+        self.canvas.draw()
+        # clear items in file listwidget
+        self.files_to_process_listwidget.clear()
+    
+    @QtCore.pyqtSlot()
+    def filelist_currentItemChanged(self):
+        if self.files_to_process_listwidget.count() == 0:
+            return
+        
+        if self.files_to_process_listwidget.currentItem() is None:
+            return
+        
+        filepath = self.files_to_process_listwidget.currentItem().text()
+        with fits.open(filepath) as hdul:
+            self.figure.clear()
+            data = hdul[0].data
+            # ax = self.figure.add_subplot(111)
+            ax = self.figure.subplots()
+            # TODO zeptat se jestli to ma byt cmap grey
+            ax.imshow(data)
+            self.canvas.draw()
     
     @QtCore.pyqtSlot()
     def load_files_button_pressed(self):
-        """Loads unique .fits file filepaths."""
+        """Loads unique .fits filepaths."""
         file_dialog = QFileDialog(self)
         file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
         file_dialog.setNameFilter("FITS (*.fits)")
@@ -112,12 +157,11 @@ class MainWindow(QMainWindow):
         r1 = self.parameter_widget.parameters['r1']
         r2 = self.parameter_widget.parameters['r2']
         t = self.parameter_widget.parameters['t']
-        processed_images = []
         
         files_to_process = [self.files_to_process_listwidget.item(x).text() for x in range(self.files_to_process_listwidget.count())]
         for file_to_process in files_to_process:
             # TODO change asdf to filepath in folder where program was run
-            processed_image = FFPS.process_image_and_save(filename= file_to_process, r=r, R=R, gamma=gamma, r1=r1, r2=r2, t=t, save_filepath="asdf")
+            FFPS.process_image_and_save(filename= file_to_process, r=r, R=R, gamma=gamma, r1=r1, r2=r2, t=t)
 
 # create the QApplication
 app = QApplication([])
