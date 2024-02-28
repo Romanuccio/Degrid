@@ -206,9 +206,7 @@ def frequency_filter(A_shift, P, r1, r2, t):
         ## x y z are used for the fit
         for j in range(m):
             for k in range(n):
-                if (j - sx) ** 2 + (k - sy) ** 2 <= r1**2 and A_shift[
-                    j, k
-                ] >= t * mean:
+                if (j - sx) ** 2 + (k - sy) ** 2 <= r1**2 and A_shift[j, k] >= t * mean:
                     xx = np.append(xx, j)
                     yy = np.append(yy, k)
                 elif (j - sx) ** 2 + (k - sy) ** 2 <= r2**2:
@@ -235,7 +233,7 @@ def frequency_filter(A_shift, P, r1, r2, t):
 # t = 1.0
 # # frequency filter parameters
 
-def process_image_and_save(filename, r, R, gamma, r1, r2, t, save_filepath):
+def process_image_and_save(filename, r, R, gamma, r1, r2, t):
     # TODO pozor na data v souboru + novy obrazek je 1020x1020
     processed_image = process_image(filename, r, R, gamma, r1, r2, t)
     hdu = fits.PrimaryHDU(processed_image)
