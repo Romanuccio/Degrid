@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from FFPS import ImageProcessor, gamma_correction
+from FFPS import ImageProcessorThread, gamma_correction
 from astropy.io import fits
 
 
@@ -57,10 +57,8 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout()
         centralWidget.setLayout(main_layout)
 
-        # tabs
         setup_page = QWidget(self)
         setup_page.setMaximumWidth(1000)
-        # view_page = QWidget(self)
 
         columns_layout = QHBoxLayout()
 
@@ -68,11 +66,20 @@ class MainWindow(QMainWindow):
         setup_layout = QVBoxLayout()
         columns_layout.addLayout(setup_layout)
         # filename list
+        files_label = QLabel("Files to process:")
         self.files_to_process_listwidget = QListWidget(self)
         # self.files_to_process_listwidget.itemClicked.connect(self.filelist_item_selected)
         self.files_to_process_listwidget.currentItemChanged.connect(
-            self.filelist_currentItemChanged
+            lambda: self.filelist_currentItemChanged(self.files_to_process_listwidget)
         )
+
+        # processed files list
+        processed_label = QLabel("Processed files:")
+        self.processed_files_listwidget = QListWidget(self)
+        self.processed_files_listwidget.currentItemChanged.connect(
+            lambda: self.filelist_currentItemChanged(self.processed_files_listwidget)
+        )
+        
 
         # files button
         load_files_button = QPushButton("Add files", self)
@@ -88,7 +95,10 @@ class MainWindow(QMainWindow):
         self.clear_button.pressed.connect(self.clear_button_pressed)
         setup_layout.addWidget(self.clear_button)
 
+        setup_layout.addWidget(files_label)
         setup_layout.addWidget(self.files_to_process_listwidget)
+        setup_layout.addWidget(processed_label)
+        setup_layout.addWidget(self.processed_files_listwidget)
         setup_layout.addWidget(self.parameter_widget)
 
         process_progress_VBoxLayout = QVBoxLayout()
@@ -135,14 +145,14 @@ class MainWindow(QMainWindow):
         self.files_to_process_listwidget.clear()
 
     @QtCore.pyqtSlot()
-    def filelist_currentItemChanged(self):
-        if self.files_to_process_listwidget.count() == 0:
+    def filelist_currentItemChanged(self, selected_QListWidget):
+        if selected_QListWidget.count() == 0:
             return
 
-        if self.files_to_process_listwidget.currentItem() is None:
+        if selected_QListWidget.currentItem() is None:
             return
 
-        filepath = self.files_to_process_listwidget.currentItem().text()
+        filepath = selected_QListWidget.currentItem().text()
         with fits.open(filepath) as hdul:
             self.figure.clear()
             data = hdul[0].data
@@ -192,21 +202,26 @@ class MainWindow(QMainWindow):
             return
 
         self.process_button.setEnabled(False)
+        self.process_button.setText("Processing...")
         # create image processing thread
         filename = self.files_to_process.pop(0)
-        self.image_processor = ImageProcessor(r, R, gamma, r1, r2, t, filename)
+        self.image_processor = ImageProcessorThread(r, R, r1, r2, t, filename)
         self.image_processor.finished.connect(self.image_processer_finished)
         self.image_processor.start()
 
     @QtCore.pyqtSlot()
     def image_processer_finished(self):
+        # add processed filename to processed listwidget
+        self.processed_files_listwidget.addItem(self.image_processor.filename)
         # amount of remaining files to process
         filecount_left = len(self.files_to_process)
+        
         if filecount_left == 0:
             # processed all
             self.progress_bar.setValue(0)
             self.process_button.setEnabled(True)
             del self.image_processor
+            self.process_button.setText("Process")
             return
 
         # keep processing

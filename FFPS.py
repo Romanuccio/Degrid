@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class ImageProcessor(QThread):
+class ImageProcessorThread(QThread):
     def __init__(self, r, R, r1, r2, t, filename):
         super().__init__()
         self.r = r
