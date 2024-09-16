@@ -2,7 +2,7 @@ from astropy.io import fits
 from scipy.io import loadmat
 from PyQt6.QtCore import QThread
 import numpy as np
-import matplotlib.pyplot as plt
+from pathlib import Path
 
 
 class ImageProcessorThread(QThread):
@@ -242,10 +242,14 @@ def frequency_filter(A_shift, P, r1, r2, t):
 
 
 def process_image_and_save(filename, r, R, r1, r2, t):
-    # TODO pozor na data v souboru + novy obrazek je 1020x1020
     processed_image = process_image(filename, r, R, r1, r2, t)
     hdu = fits.PrimaryHDU(processed_image)
-    hdu.writeto(filename + "_processed.fits", overwrite=True)
+    # make folder for processed files if it does not exist
+    directory_path = Path.joinpath(Path.cwd(), Path("ProcessedImages"))
+    directory_path.mkdir(exist_ok=True)
+    filename = Path(filename).stem
+    save_filepath = directory_path.joinpath(filename + "_processed.fits")
+    hdu.writeto(save_filepath, overwrite=True)
 
 
 def process_image(filename, r, R, r1, r2, t):

@@ -10,6 +10,12 @@ from FFPS import ImageProcessorThread, gamma_correction
 from astropy.io import fits
 
 
+class DrawListWidgetItem(QListWidgetItem):
+    def __init__(self):
+        super().__init__()
+        self.drawn = False
+
+
 class ParameterWidget(QWidget):
     """Widget containing parameters for processing."""
 
@@ -68,18 +74,25 @@ class MainWindow(QMainWindow):
         # filename list
         files_label = QLabel("Files to process:")
         self.files_to_process_listwidget = QListWidget(self)
-        # self.files_to_process_listwidget.itemClicked.connect(self.filelist_item_selected)
         self.files_to_process_listwidget.currentItemChanged.connect(
-            lambda: self.filelist_currentItemChanged(self.files_to_process_listwidget)
+            lambda current, previous, listwidget=self.files_to_process_listwidget: self.listwidget_currentItem_Changed(
+                current, previous, listwidget
+            )
         )
-
+        self.files_to_process_listwidget.itemClicked.connect(
+            lambda item: self.filelist_currentItem_clicked(item)
+        )
         # processed files list
         processed_label = QLabel("Processed files:")
         self.processed_files_listwidget = QListWidget(self)
         self.processed_files_listwidget.currentItemChanged.connect(
-            lambda: self.filelist_currentItemChanged(self.processed_files_listwidget)
+            lambda current, previous, listwidget=self.processed_files_listwidget: self.listwidget_currentItem_Changed(
+                current, previous, listwidget
+            )
         )
-        
+        self.processed_files_listwidget.itemClicked.connect(
+            lambda item: self.filelist_currentItem_clicked(item)
+        )
 
         # files button
         load_files_button = QPushButton("Add files", self)
@@ -145,22 +158,36 @@ class MainWindow(QMainWindow):
         self.files_to_process_listwidget.clear()
 
     @QtCore.pyqtSlot()
-    def filelist_currentItemChanged(self, selected_QListWidget):
+    def filelist_currentItem_clicked(self, item):
+        if item.drawn:
+            item.drawn = False
+            return
+
+        self.redraw_plots(item)
+
+    @QtCore.pyqtSlot()
+    def listwidget_currentItem_Changed(self, current, previous, selected_QListWidget):
         if selected_QListWidget.count() == 0:
             return
 
         if selected_QListWidget.currentItem() is None:
             return
 
-        filepath = selected_QListWidget.currentItem().text()
+        current.drawn = True
+
+        if previous is not None:
+            previous.drawn = False
+
+        self.redraw_plots(selected_QListWidget.currentItem())
+
+    def redraw_plots(self, selected_item):
+        filepath = selected_item.text()
         with fits.open(filepath) as hdul:
             self.figure.clear()
             data = hdul[0].data
             data = gamma_correction(data, self.parameter_widget.parameters["gamma"])
-            # ax = self.figure.add_subplot(111)
             ax = self.figure.subplots()
-            # TODO zeptat se jestli to ma byt cmap grey
-            ax.imshow(data)
+            ax.imshow(data, cmap="gray")
             self.canvas.draw()
 
     @QtCore.pyqtSlot()
@@ -176,7 +203,9 @@ class MainWindow(QMainWindow):
             if not self.files_to_process_listwidget.findItems(
                 filename, QtCore.Qt.MatchFlag.MatchExactly
             ):
-                self.files_to_process_listwidget.addItem(filename)
+                item = DrawListWidgetItem()
+                item.setText(filename)
+                self.files_to_process_listwidget.addItem(item)
 
         self.files_to_process_listwidget.sortItems()
 
@@ -215,7 +244,7 @@ class MainWindow(QMainWindow):
         self.processed_files_listwidget.addItem(self.image_processor.filename)
         # amount of remaining files to process
         filecount_left = len(self.files_to_process)
-        
+
         if filecount_left == 0:
             # processed all
             self.progress_bar.setValue(0)
