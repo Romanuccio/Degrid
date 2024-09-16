@@ -1,7 +1,28 @@
 from astropy.io import fits
 from scipy.io import loadmat
+from PyQt6.QtCore import QThread
 import numpy as np
 import matplotlib.pyplot as plt
+
+
+class ImageProcessor(QThread):
+    def __init__(self, r, R, gamma, r1, r2, t, filename):
+        super().__init__()
+        self.r = r
+        self.R = R
+        self.gamma = gamma
+        self.r1 = r1
+        self.r2 = r2
+        self.t = t
+        self.filename = filename
+
+    def set_file(self, filename):
+        self.filename = filename
+
+    def run(self):
+        process_image_and_save(
+            self.filename, self.r, self.R, self.gamma, self.r1, self.r2, self.t
+        )
 
 
 def median_filter(data, r, R, m, n):
@@ -136,11 +157,9 @@ def fit2dPolySVD(x, y, z, order):
 
     # scale the coefficients so they are correct for the unscaled data
     column = 0
-    for xpower in range(order+1):
-        for ypower in range(order - xpower+1):
-            coeffs[column] = (
-                coeffs[column] * scalex**xpower * scaley**ypower / scalez
-            )
+    for xpower in range(order + 1):
+        for ypower in range(order - xpower + 1):
+            coeffs[column] = coeffs[column] * scalex**xpower * scaley**ypower / scalez
             column += 1
 
     return coeffs
@@ -171,8 +190,8 @@ def eval2dPoly(x, y, coeffs):
 
     zbar = np.zeros(numVals)
     column = 0
-    for xpower in range(order+1):
-        for ypower in range(order - xpower+1):
+    for xpower in range(order + 1):
+        for ypower in range(order - xpower + 1):
             zbar += coeffs[column] * x**xpower * y**ypower
             column += 1
 
@@ -222,6 +241,7 @@ def frequency_filter(A_shift, P, r1, r2, t):
 
     return A_shift_filtered
 
+
 # #filename = "28031999_195.fits"
 # r = 2
 # R = 1.07
@@ -233,11 +253,13 @@ def frequency_filter(A_shift, P, r1, r2, t):
 # t = 1.0
 # # frequency filter parameters
 
+
 def process_image_and_save(filename, r, R, gamma, r1, r2, t):
     # TODO pozor na data v souboru + novy obrazek je 1020x1020
     processed_image = process_image(filename, r, R, gamma, r1, r2, t)
     hdu = fits.PrimaryHDU(processed_image)
-    hdu.writeto(filename + "_processed.fits")
+    hdu.writeto(filename + "_processed.fits", overwrite=True)
+
 
 def process_image(filename, r, R, gamma, r1, r2, t):
     """Reads and processes an image."""

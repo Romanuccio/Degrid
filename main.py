@@ -2,29 +2,32 @@ import sys
 from PyQt6.QtWidgets import *
 import PyQt6.QtCore as QtCore
 import matplotlib
-matplotlib.use('QtAgg')
+
+matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-import FFPS
+from FFPS import ImageProcessor
 from astropy.io import fits
+
 
 class ParameterWidget(QWidget):
     """Widget containing parameters for processing."""
+
     def __init__(self):
         super().__init__()
         self.parameters = {
-            'r' : 2,
-            'R' : 1.07,
-            'gamma' : 1.7,
-            'r1' : 10,
-            'r2' : 15,
-            't' : 1.
-            }
-        
+            "r": 2,
+            "R": 1.07,
+            "gamma": 1.7,
+            "r1": 10,
+            "r2": 15,
+            "t": 1.0,
+        }
+
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.value_lineedit_lambdas = []
-        
+
         for key, value in self.parameters.items():
             # name
             line_layout = QHBoxLayout()
@@ -36,78 +39,93 @@ class ParameterWidget(QWidget):
             line_layout.addWidget(value_lineedit)
             value_lineedit.textEdited.connect(self.parameter_lineedit_value_changed)
             layout.addLayout(line_layout)
-    
+
     @QtCore.pyqtSlot()
     def parameter_lineedit_value_changed(self):
         # changes value of FFPS parameter in dictionary of parameters widget
         self.parameters[self.sender().key] = self.sender().text()
-            
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        
+
         # core widget
         centralWidget = QWidget(self)
         self.setCentralWidget(centralWidget)
         self.setWindowTitle("HaPy")
         main_layout = QVBoxLayout()
         centralWidget.setLayout(main_layout)
-        
+
         # tabs
         setup_page = QWidget(self)
         setup_page.setMaximumWidth(1000)
         # view_page = QWidget(self)
-        
+
         columns_layout = QHBoxLayout()
-        
+
         # setup page
         setup_layout = QVBoxLayout()
         columns_layout.addLayout(setup_layout)
         # filename list
         self.files_to_process_listwidget = QListWidget(self)
         # self.files_to_process_listwidget.itemClicked.connect(self.filelist_item_selected)
-        self.files_to_process_listwidget.currentItemChanged.connect(self.filelist_currentItemChanged)
-        
+        self.files_to_process_listwidget.currentItemChanged.connect(
+            self.filelist_currentItemChanged
+        )
+
         # files button
         load_files_button = QPushButton("Add files", self)
-        load_files_button.clicked.connect(self.load_files_button_pressed);
+        load_files_button.clicked.connect(self.load_files_button_pressed)
         # parameter widget
         self.parameter_widget = ParameterWidget()
-        
+
         # add widgets to page layout
         setup_layout.addWidget(load_files_button)
-        
+
         # clear files button
         self.clear_button = QPushButton("Clear files", self)
         self.clear_button.pressed.connect(self.clear_button_pressed)
         setup_layout.addWidget(self.clear_button)
-        
+
         setup_layout.addWidget(self.files_to_process_listwidget)
         setup_layout.addWidget(self.parameter_widget)
-        
-        process_button = QPushButton("Process", self)
-        process_button.clicked.connect(self.process_button_pressed)
-        setup_layout.addWidget(process_button)
+
+        process_progress_VBoxLayout = QVBoxLayout()
+
+        self.process_button = QPushButton("Process", self)
+        self.process_button.clicked.connect(self.process_button_pressed)
+        # setup_layout.addWidget(self.process_button)
+        process_progress_VBoxLayout.addWidget(self.process_button)
+
+        # TODO add actual progressing
+        self.progress_bar = QProgressBar(self)
+        self.progress_bar.setTextVisible(False)
+        # self.progress_bar.setToolTip("progress")
+
+        # setup_layout.addWidget(self.progress_bar)
+        process_progress_VBoxLayout.addWidget(self.progress_bar)
+        setup_layout.addLayout(process_progress_VBoxLayout)
+
         setup_page.setLayout(columns_layout)
-        
+
         # view page
         self.figure = Figure()
         self.canvas = FigureCanvasQTAgg(self.figure)
         columns_layout.addWidget(self.canvas)
-        
+
         # view_layout = QVBoxLayout()
         # label2 = QLabel("Widget in Tab 2.")
         # view_layout.addWidget(label2)
         # view_page.setLayout(view_layout)
-        
+
         # create tab widget
         # tabwidget = QTabWidget(self)
         # tabwidget.addTab(setup_page, "Setup")
         # tabwidget.addTab(view_page, "Viewer")
-        
+
         main_layout.addWidget(setup_page)
-        
+
     @QtCore.pyqtSlot()
     def clear_button_pressed(self):
         # clear plot
@@ -115,15 +133,15 @@ class MainWindow(QMainWindow):
         self.canvas.draw()
         # clear items in file listwidget
         self.files_to_process_listwidget.clear()
-    
+
     @QtCore.pyqtSlot()
     def filelist_currentItemChanged(self):
         if self.files_to_process_listwidget.count() == 0:
             return
-        
+
         if self.files_to_process_listwidget.currentItem() is None:
             return
-        
+
         filepath = self.files_to_process_listwidget.currentItem().text()
         with fits.open(filepath) as hdul:
             self.figure.clear()
@@ -133,7 +151,7 @@ class MainWindow(QMainWindow):
             # TODO zeptat se jestli to ma byt cmap grey
             ax.imshow(data)
             self.canvas.draw()
-    
+
     @QtCore.pyqtSlot()
     def load_files_button_pressed(self):
         """Loads unique .fits filepaths."""
@@ -142,26 +160,66 @@ class MainWindow(QMainWindow):
         file_dialog.setNameFilter("FITS (*.fits)")
         file_dialog.exec()
         filenames = file_dialog.selectedFiles()
-        
+
         for filename in filenames:
-            if not self.files_to_process_listwidget.findItems(filename, QtCore.Qt.MatchFlag.MatchExactly):
+            if not self.files_to_process_listwidget.findItems(
+                filename, QtCore.Qt.MatchFlag.MatchExactly
+            ):
                 self.files_to_process_listwidget.addItem(filename)
-        
+
         self.files_to_process_listwidget.sortItems()
-        
+
     @QtCore.pyqtSlot()
     def process_button_pressed(self):
-        r = self.parameter_widget.parameters['r']
-        R = self.parameter_widget.parameters['R']
-        gamma = self.parameter_widget.parameters['gamma']
-        r1 = self.parameter_widget.parameters['r1']
-        r2 = self.parameter_widget.parameters['r2']
-        t = self.parameter_widget.parameters['t']
+        # load parameters
+        r = self.parameter_widget.parameters["r"]
+        R = self.parameter_widget.parameters["R"]
+        gamma = self.parameter_widget.parameters["gamma"]
+        r1 = self.parameter_widget.parameters["r1"]
+        r2 = self.parameter_widget.parameters["r2"]
+        t = self.parameter_widget.parameters["t"]
+
+        # load filepaths
+        self.files_to_process = [
+            self.files_to_process_listwidget.item(x).text()
+            for x in range(self.files_to_process_listwidget.count())
+        ]
         
-        files_to_process = [self.files_to_process_listwidget.item(x).text() for x in range(self.files_to_process_listwidget.count())]
-        for file_to_process in files_to_process:
-            # TODO change asdf to filepath in folder where program was run
-            FFPS.process_image_and_save(filename= file_to_process, r=r, R=R, gamma=gamma, r1=r1, r2=r2, t=t)
+        self.total_files_processing = len(self.files_to_process)
+        # file_count = len(files_to_process)
+        if len(self.files_to_process) == 0:
+            return
+
+        self.process_button.setEnabled(False)
+        # create image processing thread
+        filename = self.files_to_process.pop(0)
+        self.image_processor = ImageProcessor(r, R, gamma, r1, r2, t, filename)
+        self.image_processor.finished.connect(self.image_processer_finished)
+        self.image_processor.start()
+
+        # for i, file_to_process in enumerate(files_to_process):
+        #     # TODO change asdf to filepath in folder where program was run
+        #     image_processor.set_file(filename=file_to_process)
+        #     self.progress_bar.setValue(int(i/file_count * 100))
+
+        # self.process_button.setEnabled(True)
+
+    @QtCore.pyqtSlot()
+    def image_processer_finished(self):
+        # amount of remaining files to process
+        filecount_left = len(self.files_to_process)
+        if filecount_left == 0:
+            # processed all
+            self.progress_bar.setValue(0)
+            del self.image_processor
+            return
+        
+        # keep processing
+        self.progress_bar.setValue(int((1. - filecount_left/self.total_files_processing) * 100))
+        filename = self.files_to_process.pop(0)
+        self.image_processor.set_file(filename)
+        self.image_processor.start()
+        
 
 # create the QApplication
 app = QApplication([])
