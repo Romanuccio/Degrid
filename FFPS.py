@@ -6,11 +6,10 @@ import matplotlib.pyplot as plt
 
 
 class ImageProcessor(QThread):
-    def __init__(self, r, R, gamma, r1, r2, t, filename):
+    def __init__(self, r, R, r1, r2, t, filename):
         super().__init__()
         self.r = r
         self.R = R
-        self.gamma = gamma
         self.r1 = r1
         self.r2 = r2
         self.t = t
@@ -21,7 +20,7 @@ class ImageProcessor(QThread):
 
     def run(self):
         process_image_and_save(
-            self.filename, self.r, self.R, self.gamma, self.r1, self.r2, self.t
+            self.filename, self.r, self.R, self.r1, self.r2, self.t
         )
 
 
@@ -242,26 +241,14 @@ def frequency_filter(A_shift, P, r1, r2, t):
     return A_shift_filtered
 
 
-# #filename = "28031999_195.fits"
-# r = 2
-# R = 1.07
-# # median filter parameters
-# gamma = 1.7
-# # gamma correction parameter
-# r1 = 10
-# r2 = 15
-# t = 1.0
-# # frequency filter parameters
-
-
-def process_image_and_save(filename, r, R, gamma, r1, r2, t):
+def process_image_and_save(filename, r, R, r1, r2, t):
     # TODO pozor na data v souboru + novy obrazek je 1020x1020
-    processed_image = process_image(filename, r, R, gamma, r1, r2, t)
+    processed_image = process_image(filename, r, R, r1, r2, t)
     hdu = fits.PrimaryHDU(processed_image)
     hdu.writeto(filename + "_processed.fits", overwrite=True)
 
 
-def process_image(filename, r, R, gamma, r1, r2, t):
+def process_image(filename, r, R, r1, r2, t):
     """Reads and processes an image."""
     with fits.open(filename) as hdul:
         data = hdul[0].data
@@ -312,17 +299,5 @@ def process_image(filename, r, R, gamma, r1, r2, t):
         g = np.fft.ifft2(G)
         # g = rescale(np.real(g))
         g = rescale(np.abs(g))
-        # gamma correction
-        g = gamma_correction(g, gamma)
 
         return g
-        # Visualization
-        # subplot(1,2,1), imshow(f), title("Původní snímek")
-        # subplot(1,2,2), imshow(g), title("Snímek po odstranění mřížky metodou FFPS")
-        # f = gamma_correction(f, gamma)
-        # g = gamma_correction(g, gamma)
-        # fig, (ax1, ax2) = plt.subplots(1, 2)
-        # ax1.imshow(f, cmap="gray")
-        # ax2.imshow(g, cmap="gray")
-        # plt.show()
-        # input()

@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
-from FFPS import ImageProcessor
+from FFPS import ImageProcessor, gamma_correction
 from astropy.io import fits
 
 
@@ -43,7 +43,7 @@ class ParameterWidget(QWidget):
     @QtCore.pyqtSlot()
     def parameter_lineedit_value_changed(self):
         # changes value of FFPS parameter in dictionary of parameters widget
-        self.parameters[self.sender().key] = self.sender().text()
+        self.parameters[self.sender().key] = float(self.sender().text())
 
 
 class MainWindow(QMainWindow):
@@ -146,6 +146,7 @@ class MainWindow(QMainWindow):
         with fits.open(filepath) as hdul:
             self.figure.clear()
             data = hdul[0].data
+            data = gamma_correction(data, self.parameter_widget.parameters["gamma"])
             # ax = self.figure.add_subplot(111)
             ax = self.figure.subplots()
             # TODO zeptat se jestli to ma byt cmap grey
@@ -184,7 +185,7 @@ class MainWindow(QMainWindow):
             self.files_to_process_listwidget.item(x).text()
             for x in range(self.files_to_process_listwidget.count())
         ]
-        
+
         self.total_files_processing = len(self.files_to_process)
         # file_count = len(files_to_process)
         if len(self.files_to_process) == 0:
@@ -197,13 +198,6 @@ class MainWindow(QMainWindow):
         self.image_processor.finished.connect(self.image_processer_finished)
         self.image_processor.start()
 
-        # for i, file_to_process in enumerate(files_to_process):
-        #     # TODO change asdf to filepath in folder where program was run
-        #     image_processor.set_file(filename=file_to_process)
-        #     self.progress_bar.setValue(int(i/file_count * 100))
-
-        # self.process_button.setEnabled(True)
-
     @QtCore.pyqtSlot()
     def image_processer_finished(self):
         # amount of remaining files to process
@@ -211,15 +205,18 @@ class MainWindow(QMainWindow):
         if filecount_left == 0:
             # processed all
             self.progress_bar.setValue(0)
+            self.process_button.setEnabled(True)
             del self.image_processor
             return
-        
+
         # keep processing
-        self.progress_bar.setValue(int((1. - filecount_left/self.total_files_processing) * 100))
+        self.progress_bar.setValue(
+            int((1.0 - filecount_left / self.total_files_processing) * 100)
+        )
         filename = self.files_to_process.pop(0)
         self.image_processor.set_file(filename)
         self.image_processor.start()
-        
+
 
 # create the QApplication
 app = QApplication([])
