@@ -14,12 +14,13 @@ class ImageProcessorThread(QThread):
         self.r2 = r2
         self.t = t
         self.filename = filename
+        self.saved_filepath = ''
 
     def set_file(self, filename):
         self.filename = filename
 
     def run(self):
-        process_image_and_save(
+        self.saved_filepath = process_image_and_save(
             self.filename, self.r, self.R, self.r1, self.r2, self.t
         )
 
@@ -248,8 +249,10 @@ def process_image_and_save(filename, r, R, r1, r2, t):
     directory_path = Path.joinpath(Path.cwd(), Path("ProcessedImages"))
     directory_path.mkdir(exist_ok=True)
     filename = Path(filename).stem
+    
     save_filepath = directory_path.joinpath(filename + "_processed.fits")
     hdu.writeto(save_filepath, overwrite=True)
+    return save_filepath
 
 
 def process_image(filename, r, R, r1, r2, t):

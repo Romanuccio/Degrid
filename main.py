@@ -2,6 +2,7 @@ import sys
 from PyQt6.QtWidgets import *
 import PyQt6.QtCore as QtCore
 import matplotlib
+import pathlib
 
 matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -19,12 +20,13 @@ class DrawListWidgetItem(QListWidgetItem):
 class ParameterWidget(QWidget):
     """Widget containing parameters for processing."""
 
+    gamma_changed = QtCore.pyqtSignal()
     def __init__(self):
         super().__init__()
         self.parameters = {
+            "gamma": 1.7,
             "r": 2,
             "R": 1.07,
-            "gamma": 1.7,
             "r1": 10,
             "r2": 15,
             "t": 1.0,
@@ -48,13 +50,26 @@ class ParameterWidget(QWidget):
 
     @QtCore.pyqtSlot()
     def parameter_lineedit_value_changed(self):
+        self.sender().setStyleSheet("color: rgb(0, 0, 0);")
         # changes value of FFPS parameter in dictionary of parameters widget
-        self.parameters[self.sender().key] = float(self.sender().text())
+        value = self.sender().text()
+        key = self.sender().key
+        
+        try:
+            parsed = float(value)
+            self.parameters[key] = parsed
+        except ValueError:
+            self.sender().setStyleSheet("color: rgb(255, 0, 0);")
+            return
+        
+        if key == 'gamma':
+            self.gamma_changed.emit()
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.last_drawn_item = None
 
         # core widget
         centralWidget = QWidget(self)
@@ -99,7 +114,7 @@ class MainWindow(QMainWindow):
         load_files_button.clicked.connect(self.load_files_button_pressed)
         # parameter widget
         self.parameter_widget = ParameterWidget()
-
+        self.parameter_widget.gamma_changed.connect(self.redraw_last_item)
         # add widgets to page layout
         setup_layout.addWidget(load_files_button)
 
@@ -163,7 +178,7 @@ class MainWindow(QMainWindow):
             item.drawn = False
             return
 
-        self.redraw_plots(item)
+        self.draw_selected_item(item)
 
     @QtCore.pyqtSlot()
     def listwidget_currentItem_Changed(self, current, previous, selected_QListWidget):
@@ -178,9 +193,10 @@ class MainWindow(QMainWindow):
         if previous is not None:
             previous.drawn = False
 
-        self.redraw_plots(selected_QListWidget.currentItem())
+        self.draw_selected_item(selected_QListWidget.currentItem())
 
-    def redraw_plots(self, selected_item):
+    def draw_selected_item(self, selected_item):
+        self.last_drawn_item = selected_item
         filepath = selected_item.text()
         with fits.open(filepath) as hdul:
             self.figure.clear()
@@ -190,13 +206,22 @@ class MainWindow(QMainWindow):
             ax.imshow(data, cmap="gray")
             self.canvas.draw()
 
+    def redraw_last_item(self):
+        if self.last_drawn_item is None:
+            return
+        
+        self.draw_selected_item(self.last_drawn_item)
+        
+        
     @QtCore.pyqtSlot()
     def load_files_button_pressed(self):
         """Loads unique .fits filepaths."""
         file_dialog = QFileDialog(self)
         file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
         file_dialog.setNameFilter("FITS (*.fits)")
-        file_dialog.exec()
+        if not file_dialog.exec():
+            return
+        
         filenames = file_dialog.selectedFiles()
 
         for filename in filenames:
@@ -211,14 +236,20 @@ class MainWindow(QMainWindow):
 
     @QtCore.pyqtSlot()
     def process_button_pressed(self):
+        self.processed_files_listwidget.clear()
         # load parameters
-        r = self.parameter_widget.parameters["r"]
-        R = self.parameter_widget.parameters["R"]
-        gamma = self.parameter_widget.parameters["gamma"]
-        r1 = self.parameter_widget.parameters["r1"]
-        r2 = self.parameter_widget.parameters["r2"]
-        t = self.parameter_widget.parameters["t"]
-
+        try:
+            r = self.parameter_widget.parameters["r"]
+            R = self.parameter_widget.parameters["R"]
+            gamma = self.parameter_widget.parameters["gamma"]
+            r1 = self.parameter_widget.parameters["r1"]
+            r2 = self.parameter_widget.parameters["r2"]
+            t = self.parameter_widget.parameters["t"]
+        except ValueError:
+            error_dialog = QErrorMessage()
+            error_dialog.showMessage("Invalid parameters.")
+            return
+        
         # load filepaths
         self.files_to_process = [
             self.files_to_process_listwidget.item(x).text()
@@ -241,7 +272,9 @@ class MainWindow(QMainWindow):
     @QtCore.pyqtSlot()
     def image_processer_finished(self):
         # add processed filename to processed listwidget
-        self.processed_files_listwidget.addItem(self.image_processor.filename)
+        item = DrawListWidgetItem()
+        item.setText(str(self.image_processor.saved_filepath))
+        self.processed_files_listwidget.addItem(item)
         # amount of remaining files to process
         filecount_left = len(self.files_to_process)
 
