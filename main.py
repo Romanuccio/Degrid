@@ -218,7 +218,7 @@ class MainWindow(QMainWindow):
         """Loads unique .fits filepaths."""
         file_dialog = QFileDialog(self)
         file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
-        file_dialog.setNameFilter("FITS (*.fits)")
+        file_dialog.setNameFilter("FITS (*.fits *.fit *.fts)")
         if not file_dialog.exec():
             return
         
