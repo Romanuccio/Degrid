@@ -17,7 +17,7 @@ license: BSD-2-Clause
 version: 0.1.0
 date-released: 2026-03-27
 abstract: >
-  Degrid is a PyQt6 desktop application for processing and visualizing FITS astronomy images.
+  PyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files. The application removes impulse noise and periodic noise (square/rectangular grid).
 doi: 10.5281/zenodo.19253611
 identifiers:
   - type: doi
