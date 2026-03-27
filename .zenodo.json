@@ -5,7 +5,20 @@
   "license": "BSD-2-Clause",
   "creators": [
     {
-      "name": "Roman Byrtus"
+      "name": "Byrtus, Roman",
+      "type": "ProjectMember"
+    },
+    {
+      "name": "Satýnek, Daniel",
+      "type": "Researcher"
+    },
+    {
+      "name": "Druckmüllerová, Hana",
+      "type": "Researcher"
+    },
+    {
+      "name": "Habbal, Shadia",
+      "type": "Researcher"
     }
   ],
   "keywords": [

@@ -9,7 +9,10 @@ description = "PyQt6 desktop application for processing and visualizing FITS ast
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
-  { name = "Romanuccio" }
+  { name = "Roman Byrtus" },
+  { name = "Daniel Satýnek" },
+  { name = "Hana Druckmüllerová" },
+  { name = "Shadia Habbal" }
 ]
 license = { text = "BSD-2-Clause" }  # replace if you choose a different license
 keywords = ["astronomy", "fits", "image processing", "pyqt", "gui"]

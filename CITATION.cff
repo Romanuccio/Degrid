@@ -3,7 +3,14 @@ title: Degrid
 message: "If you use Degrid, please cite the software using this metadata."
 type: software
 authors:
-  - family-names: Roman Byrtus
+  - family-names: Byrtus
+    given-names: Roman
+  - family-names: Satýnek
+    given-names: Daniel
+  - family-names: Druckmüllerová
+    given-names: Hana
+  - family-names: Habbal
+    given-names: Shadia
 repository-code: "https://github.com/Romanuccio/Degrid"
 url: "https://github.com/Romanuccio/Degrid"
 license: BSD-2-Clause
