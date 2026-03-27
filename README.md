@@ -1,6 +1,6 @@
 # Degrid
 
-[![DOI](https://zenodo.org/badge/700892229.svg)](https://doi.org/10.5281/zenodo.19253611)
+[![DOI](https://zenodo.org/badge/700892229.svg)](https://doi.org/10.5281/zenodo.19253611) ![Python](https://img.shields.io/badge/python-3.10+-blue) ![License](https://img.shields.io/badge/license-BSD--2--Clause-green)
 
 **Degrid** is a PyQt6 desktop application for processing and visualizing FITS (Flexible Image Transport System) images, designed for astronomy workflows.
 
