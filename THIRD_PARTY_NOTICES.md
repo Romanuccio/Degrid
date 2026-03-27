@@ -1,6 +1,14 @@
+# Third-Party Notices
+
+## Polynomial fitting code in `FFPS.py`
+
+Parts of the fitting approach in this project are derived from or based on code by Richard Whitehead.
+
+Original copyright notice:
+
 BSD 2-Clause License
 
-Copyright (c) 2026, Roman Byrtus
+Copyright (c) 2019, Richard Whitehead
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
