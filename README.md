@@ -98,7 +98,7 @@ See `THIRD_PARTY_NOTICES.md` for attribution.
 
 If you use Degrid in your research, please cite:
 
-> Byrtus, R., Satýnek, D., Druckmüllerová, H., & Habbal, S. (2026).  
+> Byrtus, R., Druckmüllerová, H., Habbal, S., & Satýnek, D. (2026).  
 > *Degrid (v0.1.0)*. Zenodo. https://doi.org/10.5281/zenodo.19253611
 
 ---
