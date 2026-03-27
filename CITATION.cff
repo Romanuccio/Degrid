@@ -5,12 +5,12 @@ type: software
 authors:
   - family-names: Byrtus
     given-names: Roman
-  - family-names: Satýnek
-    given-names: Daniel
   - family-names: Druckmüllerová
     given-names: Hana
   - family-names: Habbal
     given-names: Shadia
+  - family-names: Satýnek
+    given-names: Daniel
 repository-code: "https://github.com/Romanuccio/Degrid"
 url: "https://github.com/Romanuccio/Degrid"
 license: BSD-2-Clause
