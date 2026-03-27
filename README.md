@@ -109,14 +109,6 @@ https://github.com/Romanuccio/Degrid
 
 ---
 
-## ⚠️ Notes
-
-* This is the first public release (`v0.1.0`)
-* The application is under active development
-* Interface and features may change in future versions
-
----
-
 ## 👤 Authors
 
 Roman Byrtus, Hana Druckmüllerová, Shadia Habbal, Daniel Satýnek
