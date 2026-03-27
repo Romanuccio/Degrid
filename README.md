@@ -96,7 +96,10 @@ See `THIRD_PARTY_NOTICES.md` for attribution.
 
 ## 📖 Citation
 
-If you use Degrid in your research, please cite it using the metadata in `CITATION.cff`.
+If you use Degrid in your research, please cite:
+
+> Byrtus, R., Satýnek, D., Druckmüllerová, H., & Habbal, S. (2026).  
+> *Degrid (v0.1.0)*. Zenodo. https://doi.org/10.5281/zenodo.19253611
 
 ---
 
