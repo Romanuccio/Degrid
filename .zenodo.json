@@ -1,6 +1,6 @@
 {
   "title": "Degrid",
-  "description": "PyQt6 desktop application for processing and visualizing FITS astronomy images.",
+  "description": "PyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files. The application removes impulse noise and periodic noise (square/rectangular grid).",
   "upload_type": "software",
   "license": "BSD-2-Clause",
   "creators": [
