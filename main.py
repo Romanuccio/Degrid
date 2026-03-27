@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
         # core widget
         centralWidget = QWidget(self)
         self.setCentralWidget(centralWidget)
-        self.setWindowTitle("HaPy")
+        self.setWindowTitle("Degrid")
         main_layout = QVBoxLayout()
         centralWidget.setLayout(main_layout)
 

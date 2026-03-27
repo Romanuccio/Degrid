@@ -1,0 +1,26 @@
+{
+  "title": "Degrid",
+  "description": "PyQt6 desktop application for processing and visualizing FITS astronomy images.",
+  "upload_type": "software",
+  "license": "BSD-2-Clause",
+  "creators": [
+    {
+      "name": "Roman Byrtus"
+    }
+  ],
+  "keywords": [
+    "astronomy",
+    "FITS",
+    "image processing",
+    "PyQt",
+    "GUI"
+  ],
+  "access_right": "open",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/Romanuccio/Degrid",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}

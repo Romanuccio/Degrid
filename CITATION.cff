@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: Degrid
+message: "If you use Degrid, please cite the software using this metadata."
+type: software
+authors:
+  - family-names: Roman Byrtus
+repository-code: "https://github.com/Romanuccio/Degrid"
+url: "https://github.com/Romanuccio/Degrid"
+license: BSD-2-Clause
+version: 0.1.0
+date-released: 2026-03-27
+abstract: >
+  Degrid is a PyQt6 desktop application for processing and visualizing FITS astronomy images.
+keywords:
+  - astronomy
+  - FITS
+  - image processing
+  - PyQt
+  - GUI
