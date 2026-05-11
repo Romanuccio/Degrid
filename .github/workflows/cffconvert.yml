@@ -49,7 +49,9 @@ jobs:
 
       - name: Generate .zenodo.json
         run: |
-          cffconvert --infile CITATION.cff --format zenodo > .zenodo.json
+          set -e
+          cffconvert --infile CITATION.cff --format zenodo --outfile .zenodo.json
+      
           ls -lah .zenodo.json
 
       - name: Inject roles and dependencies
