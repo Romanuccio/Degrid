@@ -3,6 +3,7 @@ name: CFF + Zenodo Release Validation
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 jobs:
   release-metadata:
