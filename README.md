@@ -1,4 +1,4 @@
-# Degrid
+# Degrid: a desktop application for processing images from SOHO EIT
 
 [![DOI](https://zenodo.org/badge/700892229.svg)](https://doi.org/10.5281/zenodo.19253611) ![Python](https://img.shields.io/badge/python-3.10+-blue) ![License](https://img.shields.io/badge/license-BSD--2--Clause-green)
 
