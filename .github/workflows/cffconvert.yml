@@ -1,19 +1,52 @@
-name: cffconvert
+name: CFF + Zenodo Validation
 
 on:
   push:
     paths:
       - CITATION.cff
+  release:
+    types: [published]
+  workflow_dispatch:
 
 jobs:
-  validate:
-    name: "validate"
+  validate-and-generate:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
-      - name: Check out a copy of the repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check whether the citation metadata from CITATION.cff is valid
-        uses: citation-file-format/cffconvert-github-action@2.0.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          args: "--validate"
+          python-version: "3.x"
+
+      - name: Install cffconvert
+        run: |
+          pip install cffconvert
+
+      - name: Validate CITATION.cff
+        run: |
+          cffconvert --validate
+
+      - name: Generate .zenodo.json
+        run: |
+          cffconvert --infile CITATION.cff --format zenodo > .zenodo.json
+
+      - name: Validate generated Zenodo JSON
+        run: |
+          python -m json.tool .zenodo.json > /dev/null
+
+      - name: Commit updated .zenodo.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .zenodo.json
+
+          git diff --cached --quiet || git commit -m "Update .zenodo.json from CITATION.cff"
+
+          git push
