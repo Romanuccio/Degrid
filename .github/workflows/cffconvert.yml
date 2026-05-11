@@ -21,20 +21,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # STEP 1: Inject version from tag
       - name: Inject version from tag
         run: |
           VERSION=${GITHUB_REF_NAME#v}
-      
+
           python << EOF
           import yaml
-      
+
           with open("CITATION.cff") as f:
               data = yaml.safe_load(f)
-      
+
           data["version"] = "$VERSION"
-      
+
           with open("CITATION.cff", "w") as f:
               yaml.dump(data, f, sort_keys=False)
+          EOF
+
+      # STEP 2: Extract dependencies from pyproject.toml
+      - name: Extract dependencies from pyproject.toml
+        run: |
+          python << 'EOF'
+          import tomllib
+
+          with open("pyproject.toml", "rb") as f:
+              data = tomllib.load(f)
+
+          deps = data.get("project", {}).get("dependencies", [])
+
+          with open("deps.py", "w") as f:
+              f.write("deps = " + repr(deps))
           EOF
 
       - name: Set up Python
@@ -43,21 +59,23 @@ jobs:
           python-version: "3.x"
 
       - name: Install cffconvert
-        run: |
-          pip install cffconvert
+        run: pip install cffconvert
 
+      # STEP 3: Validate CITATION.cff
       - name: Validate CITATION.cff
-        run: |
-          cffconvert --validate
+        run: cffconvert --validate
 
+      # STEP 4: Generate .zenodo.json
       - name: Generate .zenodo.json
         run: |
           cffconvert --infile CITATION.cff --format zenodo > .zenodo.json
 
-      - name: Inject roles into zenodo.json
+      # STEP 5: Inject roles + dependencies into zenodo.json
+      - name: Inject roles and dependencies into zenodo.json
         run: |
           python << 'EOF'
           import json
+          from deps import deps
 
           with open(".zenodo.json") as f:
               data = json.load(f)
@@ -68,25 +86,29 @@ jobs:
               "Habbal, Shadia": "Researcher",
               "Satýnek, Daniel": "Researcher"
           }
-          
+
           for c in data.get("creators", []):
               c["type"] = name_map.get(c.get("name"), "Other")
+
+          data["notes"] = (
+              data.get("notes", "")
+              + "\n\nDependencies:\n- " + "\n- ".join(deps)
+          ).strip()
 
           with open(".zenodo.json", "w") as f:
               json.dump(data, f, indent=2)
           EOF
 
+      # STEP 6: Validate generated Zenodo JSON
       - name: Validate generated Zenodo JSON
-        run: |
-          python -m json.tool .zenodo.json > /dev/null
+        run: python -m json.tool .zenodo.json > /dev/null
 
+      # STEP 7: Commit updated Zenodo file
       - name: Commit updated .zenodo.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add .zenodo.json
-
           git diff --cached --quiet || git commit -m "Update .zenodo.json from CITATION.cff"
-
           git push
