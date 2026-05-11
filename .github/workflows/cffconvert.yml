@@ -103,12 +103,14 @@ jobs:
       - name: Validate generated Zenodo JSON
         run: python -m json.tool .zenodo.json > /dev/null
 
-      # STEP 7: Commit updated Zenodo file
       - name: Commit updated .zenodo.json
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
+      
+          git fetch origin main
+      
           git add .zenodo.json
           git diff --cached --quiet || git commit -m "Update .zenodo.json from CITATION.cff"
+      
           git push origin HEAD:main
