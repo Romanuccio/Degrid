@@ -111,4 +111,4 @@ jobs:
 
           git add .zenodo.json
           git diff --cached --quiet || git commit -m "Update .zenodo.json from CITATION.cff"
-          git push
+          git push origin HEAD:main
