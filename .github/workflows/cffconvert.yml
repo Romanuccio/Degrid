@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - CITATION.cff
+    branches-ignore:
+      - "auto-update-*"
   release:
     types: [published]
   workflow_dispatch:
@@ -35,6 +37,28 @@ jobs:
       - name: Generate .zenodo.json
         run: |
           cffconvert --infile CITATION.cff --format zenodo > .zenodo.json
+
+      - name: Inject roles into zenodo.json
+        run: |
+          python << 'EOF'
+          import json
+
+          with open(".zenodo.json") as f:
+              data = json.load(f)
+
+          name_map = {
+              "Byrtus, Roman": "ProjectMember",
+              "Druckmüllerová, Hana": "Researcher",
+              "Habbal, Shadia": "Researcher",
+              "Satýnek, Daniel": "Researcher"
+          }
+          
+          for c in data.get("creators", []):
+              c["type"] = name_map.get(c.get("name"), "Other")
+
+          with open(".zenodo.json", "w") as f:
+              json.dump(data, f, indent=2)
+          EOF
 
       - name: Validate generated Zenodo JSON
         run: |
