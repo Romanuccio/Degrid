@@ -1,0 +1,16 @@
+name: Validate CFF
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate-cff:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: cff-validator
+        uses: dieghernan/cff-validator@v5
