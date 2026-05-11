@@ -5,13 +5,13 @@ type: software
 authors:
   - family-names: Byrtus
     given-names: Roman
-    orcid: 0000-0002-7452-0573
+    orcid: https://orcid.org/0000-0002-7452-0573
   - family-names: Druckmüllerová
     given-names: Hana
-    orcid: 0000-0001-6688-7327
+    orcid: https://orcid.org/0000-0001-6688-7327
   - family-names: Habbal
     given-names: Shadia
-    orcid: 0000-0003-4089-9316
+    orcid: https://orcid.org/0000-0003-4089-9316
   - family-names: Satýnek
     given-names: Daniel
 repository-code: "https://github.com/Romanuccio/Degrid"
