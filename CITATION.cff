@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: Degrid: a desktop application for processing images from SOHO EIT
+title: "Degrid: a desktop application for processing images from SOHO EIT"
 message: "If you use Degrid, please cite the software using this metadata."
 type: software
 authors:
@@ -22,9 +22,6 @@ date-released: 2026-03-27
 abstract: >
   PyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files level 0. The application removes impulse noise and periodic noise (square/rectangular grid). This script was created as a part of article "Removal of the Mesh Grid in SOHO EIT Solar Images with a Notch Filter" in the Astrophysical Journal Supplement Series. It explains and derives the mathematical calculations contained therein.
 doi: 10.5281/zenodo.19253611
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.19253611
 keywords:
   - astronomy
   - FITS
