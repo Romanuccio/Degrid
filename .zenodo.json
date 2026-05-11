@@ -31,7 +31,6 @@
   "license": {
     "id": "BSD-2-Clause"
   },
-  "publication_date": "2026-03-27",
   "title": "Degrid: a desktop application for processing images from SOHO EIT",
   "version": "0.1.0"
 }
