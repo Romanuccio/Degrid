@@ -1,26 +1,26 @@
 {
-  "title": "Degrid",
-  "description": "PyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files. The application removes impulse noise and periodic noise (square/rectangular grid).",
-  "upload_type": "software",
-  "license": "BSD-2-Clause",
   "creators": [
     {
       "name": "Byrtus, Roman",
+      "orcid": "0000-0002-7452-0573",
       "type": "ProjectMember"
     },
     {
-      "name": "Druckmüllerová, Hana",
+      "name": "Druckm\u00fcllerov\u00e1, Hana",
+      "orcid": "0000-0001-6688-7327",
       "type": "Researcher"
     },
     {
       "name": "Habbal, Shadia",
+      "orcid": "0000-0003-4089-9316",
       "type": "Researcher"
     },
     {
-      "name": "Satýnek, Daniel",
+      "name": "Sat\u00fdnek, Daniel",
       "type": "Researcher"
     }
   ],
+  "description": "PyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files level 0. The application removes impulse noise and periodic noise (square/rectangular grid).\u00a0This script was created as a part of article \"Removal of the Mesh Grid in SOHO EIT Solar Images with a Notch Filter\" in the Astrophysical Journal Supplement Series. It explains and derives the mathematical calculations contained therein.\n",
   "keywords": [
     "astronomy",
     "FITS",
@@ -28,12 +28,10 @@
     "PyQt",
     "GUI"
   ],
-  "access_right": "open",
-  "related_identifiers": [
-    {
-      "identifier": "https://github.com/Romanuccio/Degrid",
-      "relation": "isSupplementTo",
-      "scheme": "url"
-    }
-  ]
+  "license": {
+    "id": "BSD-2-Clause"
+  },
+  "publication_date": "2026-03-27",
+  "title": "Degrid: a desktop application for processing images from SOHO EIT",
+  "version": "0.1.0"
 }
