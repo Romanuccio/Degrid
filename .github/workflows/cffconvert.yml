@@ -12,6 +12,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Show workflow context
+        run: |
+          git status
+          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
