@@ -1,28 +1,27 @@
-name: CFF + Zenodo Validation
+name: CFF + Zenodo Release Validation
 
 on:
-  push:
-    paths:
-      - CITATION.cff
-    branches-ignore:
-      - "auto-update-*"
   release:
     types: [published]
-  workflow_dispatch:
 
 jobs:
-  validate-and-generate:
+  release-metadata:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # STEP 1: Inject version from tag
-      - name: Inject version from tag
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install cffconvert pyyaml
+
+      # Inject version from release tag
+      - name: Inject version into CITATION.cff
         run: |
           VERSION=${GITHUB_REF_NAME#v}
 
@@ -38,47 +37,16 @@ jobs:
               yaml.dump(data, f, sort_keys=False)
           EOF
 
-      # STEP 2: Extract dependencies from pyproject.toml
-      - name: Extract dependencies from pyproject.toml
-        run: |
-          python << 'EOF'
-          import tomllib
-
-          with open("pyproject.toml", "rb") as f:
-              data = tomllib.load(f)
-
-          deps = data.get("project", {}).get("dependencies", [])
-
-          with open("deps.py", "w") as f:
-              f.write("deps = " + repr(deps))
-          EOF
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Install cffconvert
-        run: pip install cffconvert
-
-      # STEP 3: Validate CITATION.cff
       - name: Validate CITATION.cff
         run: cffconvert --validate
 
-      # STEP 4: Generate .zenodo.json
       - name: Generate .zenodo.json
-        run: |
-          cffconvert --infile CITATION.cff --format zenodo > .zenodo.json
+        run: cffconvert --infile CITATION.cff --format zenodo > .zenodo.json
 
-      # STEP 5: Inject roles + dependencies into zenodo.json
-      - name: Inject roles and dependencies into zenodo.json
+      - name: Inject roles and dependencies
         run: |
           python << 'EOF'
           import json
-          from deps import deps
-
-          with open(".zenodo.json") as f:
-              data = json.load(f)
 
           name_map = {
               "Byrtus, Roman": "ProjectMember",
@@ -87,8 +55,15 @@ jobs:
               "Satýnek, Daniel": "Researcher"
           }
 
+          with open(".zenodo.json") as f:
+              data = json.load(f)
+
           for c in data.get("creators", []):
               c["type"] = name_map.get(c.get("name"), "Other")
+
+          with open("pyproject.toml", "rb") as f:
+              import tomllib
+              deps = tomllib.load(f).get("project", {}).get("dependencies", [])
 
           data["notes"] = (
               data.get("notes", "")
@@ -99,20 +74,17 @@ jobs:
               json.dump(data, f, indent=2)
           EOF
 
-      # STEP 6: Validate generated Zenodo JSON
-      - name: Validate generated Zenodo JSON
+      - name: Validate Zenodo JSON
         run: python -m json.tool .zenodo.json > /dev/null
 
-      - name: Commit updated .zenodo.json
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      
-          git fetch origin main
-          git checkout -B main origin/main
-      
-          git add .zenodo.json
-      
-          git diff --cached --quiet || git commit -m "Update .zenodo.json from CITATION.cff"
-      
-          git push origin main
+      - name: Upload Zenodo metadata artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zenodo-metadata
+          path: .zenodo.json
+
+      - name: Upload CITATION.cff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: citation-cff
+          path: CITATION.cff
