@@ -96,10 +96,10 @@ See `THIRD_PARTY_NOTICES.md` for attribution.
 
 ## 📖 Citation
 
-If you use Degrid in your research, please cite the latest version on Zenodo. It is also possible to use the base Zenodo release:
+If you use Degrid in your research, please cite the latest version on Zenodo. It is also possible to cite all versions and refer to the latest release.
 
 > Byrtus, R., Druckmüllerová, H., Habbal, S., & Satýnek, D. (2026).  
-> *Degrid (v0.1.0)*. Zenodo. https://doi.org/10.5281/zenodo.19253611
+> *Degrid (v0.1.3)*. Zenodo. https://doi.org/10.5281/zenodo.19253611
 
 ---
 
