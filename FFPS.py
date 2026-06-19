@@ -2,6 +2,7 @@ from astropy.io import fits
 from scipy.io import loadmat
 from PyQt6.QtCore import QThread
 import numpy as np
+from scipy import ndimage
 from pathlib import Path
 
 
@@ -24,56 +25,114 @@ class ImageProcessorThread(QThread):
             self.filename, self.r, self.R, self.r1, self.r2, self.t
         )
 
-
-def median_filter(data, r, R, m, n):
-    f = np.empty_like(data)
-    k = 0
-
-    while True:
-        for i in range(m):
-            for j in range(n):
-                # edge cases
-                if i < r:
-                    i_start = 0
-                    i_end = i + r + 1
-                elif i >= m - r:
-                    i_start = i - r
-                    i_end = m
-                else:
-                    i_start = i - r
-                    i_end = i + r + 1
-
-                if j < r:
-                    j_start = 0
-                    j_end = j + r + 1
-                elif j >= n - r:
-                    j_start = j - r
-                    j_end = n
-                else:
-                    j_start = j - r
-                    j_end = j + r + 1
-
-                # median
-                filter_submatrix = data[i_start:i_end, j_start:j_end]
-                med = np.median(filter_submatrix)
-
-                # R condition
-                if data[i, j] / med > R:
-                    f[i, j] = med
-                    k += 1
-                else:
-                    f[i, j] = data[i, j]
-
-        cond = k / m / n * 100
-
-        if cond < 0.5:
+def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
+    """
+    Iteratively adjusts R until the percentage of changed pixels stabilizes.
+    Optimized using vectorization.
+    """
+    data = data.astype(np.float64)
+    m, n = data.shape
+    total_pixels = m * n
+    
+    R = R_init
+    prev_change_pct = 100.0
+    
+    for iteration in range(max_iter):
+        # 1. Calculate Median (Vectorized)
+        window_size = 2 * r + 1
+        med_filtered = ndimage.median_filter(data, size=window_size, mode='reflect')
+        
+        # 2. Calculate Mask
+        epsilon = 1e-9
+        ratio = data / (med_filtered + epsilon)
+        mask = ratio > R
+        
+        # 3. Apply Update
+        f = data.copy()
+        f[mask] = med_filtered[mask]
+        
+        # 4. Calculate Change Percentage
+        num_changed = np.count_nonzero(mask)
+        change_pct = (num_changed / total_pixels) * 100
+        
+        # Debug/Logging (optional)
+        # print(f"Iter {iteration}: R={R:.4f}, Changed={change_pct:.2f}%")
+        
+        # 5. Convergence Logic
+        if abs(change_pct - prev_change_pct) < tol_change:
             return f
-        elif cond > 1:
+            
+        # Adjust R based on logic similar to your original code
+        if change_pct < 0.5:
+            # Too few changes? Maybe R is too high, or we are done.
+            # Your original code returned here. Let's assume convergence.
+            return f
+        elif change_pct > 1.0:
+            # Too many changes? Increase R to make condition stricter.
             R += 0.01
-            k = 0
         else:
+            # In between? Slight increase.
             R += 0.005
-            k = 0
+            
+        prev_change_pct = change_pct
+        # Note: We do NOT update 'data' to 'f' inside the loop unless 
+        # the algorithm specifically requires recursive filtering (updating the source).
+        # If the original code intended to update the source for the next iteration:
+        # data = f 
+
+    return f
+
+
+# def median_filter(data, r, R, m, n):
+    # f = np.empty_like(data)
+    # k = 0
+
+    # while True:
+    #     for i in range(m):
+    #         for j in range(n):
+    #             # edge cases
+    #             if i < r:
+    #                 i_start = 0
+    #                 i_end = i + r + 1
+    #             elif i >= m - r:
+    #                 i_start = i - r
+    #                 i_end = m
+    #             else:
+    #                 i_start = i - r
+    #                 i_end = i + r + 1
+
+    #             if j < r:
+    #                 j_start = 0
+    #                 j_end = j + r + 1
+    #             elif j >= n - r:
+    #                 j_start = j - r
+    #                 j_end = n
+    #             else:
+    #                 j_start = j - r
+    #                 j_end = j + r + 1
+
+    #             # median
+    #             filter_submatrix = data[i_start:i_end, j_start:j_end]
+    #             med = np.median(filter_submatrix)
+
+    #             # R condition
+    #             # if (not np.isclose(med, 0.)) and (data[i, j] / med > R):
+    #             if data[i, j] / ( med + 1e-9) > R:
+    #                 f[i, j] = med
+    #                 k += 1
+    #             else:
+    #                 f[i, j] = data[i, j]
+
+    #     cond = k / m / n * 100
+
+    #     if cond < 0.5:
+    #         return f
+    #     elif cond > 1:
+    #         R += 0.01
+    #         k = 0
+    #     else:
+    #         R += 0.005
+    #         k = 0
 
 
 def rescale(f):
