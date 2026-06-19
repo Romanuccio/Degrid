@@ -1,8 +1,8 @@
-# Degrid
+# Degrid: a desktop application for processing images from SOHO EIT
 
 [![DOI](https://zenodo.org/badge/700892229.svg)](https://doi.org/10.5281/zenodo.19253611) ![Python](https://img.shields.io/badge/python-3.10+-blue) ![License](https://img.shields.io/badge/license-BSD--2--Clause-green)
 
-**Degrid** is a PyQt6 desktop application for processing and visualizing FITS (Flexible Image Transport System) images, designed for astronomy workflows.
+**Degrid** is a pyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files level 0. The application removes impulse noise and periodic noise (square/rectangular grid). This script was created as a part of article "Removal of the Mesh Grid in SOHO EIT Solar Images with a Notch Filter" in the Astrophysical Journal Supplement Series. It explains and derives the mathematical calculations contained therein.
 
 ---
 
@@ -96,10 +96,10 @@ See `THIRD_PARTY_NOTICES.md` for attribution.
 
 ## 📖 Citation
 
-If you use Degrid in your research, please cite:
+If you use Degrid in your research, please cite the latest version on Zenodo. It is also possible to cite all versions and refer to the latest release.
 
-> Byrtus, R., Satýnek, D., Druckmüllerová, H., & Habbal, S. (2026).  
-> *Degrid (v0.1.0)*. Zenodo. https://doi.org/10.5281/zenodo.19253611
+> Byrtus, R., Druckmüllerová, H., Habbal, S., & Satýnek, D. (2026).  
+> *Degrid (v0.1.3)*. Zenodo. https://doi.org/10.5281/zenodo.19253611
 
 ---
 

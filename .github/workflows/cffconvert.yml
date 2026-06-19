@@ -1,0 +1,101 @@
+name: CFF + Zenodo Release Validation
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  release-metadata:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show workflow context
+        run: |
+          git status
+          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install cffconvert pyyaml
+
+      # Inject version from release tag
+      - name: Inject version into CITATION.cff
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+
+          python << EOF
+          import yaml
+
+          with open("CITATION.cff") as f:
+              data = yaml.safe_load(f)
+
+          data["version"] = "$VERSION"
+
+          with open("CITATION.cff", "w") as f:
+              yaml.dump(data, f, sort_keys=False)
+          EOF
+
+      - name: Validate CITATION.cff
+        run: cffconvert --validate
+
+      - name: Generate .zenodo.json
+        run: |
+          set -e
+          cffconvert --infile CITATION.cff --format zenodo --outfile .zenodo.json
+      
+          ls -lah .zenodo.json
+
+      - name: Inject roles and dependencies
+        run: |
+          python << 'EOF'
+          import json
+
+          name_map = {
+              "Byrtus, Roman": "ProjectMember",
+              "Druckmüllerová, Hana": "Researcher",
+              "Habbal, Shadia": "Researcher",
+              "Satýnek, Daniel": "Researcher"
+          }
+
+          with open(".zenodo.json") as f:
+              data = json.load(f)
+
+          for c in data.get("creators", []):
+              c["type"] = name_map.get(c.get("name"), "Other")
+
+          with open("pyproject.toml", "rb") as f:
+              import tomllib
+              deps = tomllib.load(f).get("project", {}).get("dependencies", [])
+
+          data["notes"] = (
+              data.get("notes", "")
+              + "\n\nDependencies:\n- " + "\n- ".join(deps)
+          ).strip()
+
+          with open(".zenodo.json", "w") as f:
+              json.dump(data, f, indent=2)
+          EOF
+
+      - name: Validate Zenodo JSON
+        run: python -m json.tool .zenodo.json > /dev/null
+
+      - name: Upload Zenodo metadata artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: zenodo-metadata
+          path: .zenodo.json
+
+      - name: Upload CITATION.cff artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: citation-cff
+          path: CITATION.cff

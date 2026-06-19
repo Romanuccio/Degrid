@@ -1,27 +1,26 @@
 cff-version: 1.2.0
-title: Degrid
+title: "Degrid: a desktop application for processing images from SOHO EIT"
 message: "If you use Degrid, please cite the software using this metadata."
 type: software
 authors:
   - family-names: Byrtus
     given-names: Roman
+    orcid: https://orcid.org/0000-0002-7452-0573
   - family-names: Druckmüllerová
     given-names: Hana
+    orcid: https://orcid.org/0000-0001-6688-7327
   - family-names: Habbal
     given-names: Shadia
+    orcid: https://orcid.org/0000-0003-4089-9316
   - family-names: Satýnek
     given-names: Daniel
 repository-code: "https://github.com/Romanuccio/Degrid"
 url: "https://github.com/Romanuccio/Degrid"
 license: BSD-2-Clause
 version: 0.1.0
-date-released: 2026-03-27
 abstract: >
-  Degrid is a PyQt6 desktop application for processing and visualizing FITS astronomy images.
+  PyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files level 0. The application removes impulse noise and periodic noise (square/rectangular grid). This script was created as a part of article "Removal of the Mesh Grid in SOHO EIT Solar Images with a Notch Filter" in the Astrophysical Journal Supplement Series. It explains and derives the mathematical calculations contained therein.
 doi: 10.5281/zenodo.19253611
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.19253611
 keywords:
   - astronomy
   - FITS
