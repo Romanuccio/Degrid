@@ -55,9 +55,6 @@ def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
         num_changed = np.count_nonzero(mask)
         change_pct = (num_changed / total_pixels) * 100
         
-        # Debug/Logging (optional)
-        # print(f"Iter {iteration}: R={R:.4f}, Changed={change_pct:.2f}%")
-        
         # 5. Convergence Logic
         if abs(change_pct - prev_change_pct) < tol_change:
             return f
@@ -65,7 +62,6 @@ def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
         # Adjust R based on logic similar to your original code
         if change_pct < 0.5:
             # Too few changes? Maybe R is too high, or we are done.
-            # Your original code returned here. Let's assume convergence.
             return f
         elif change_pct > 1.0:
             # Too many changes? Increase R to make condition stricter.
@@ -75,10 +71,6 @@ def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
             R += 0.005
             
         prev_change_pct = change_pct
-        # Note: We do NOT update 'data' to 'f' inside the loop unless 
-        # the algorithm specifically requires recursive filtering (updating the source).
-        # If the original code intended to update the source for the next iteration:
-        # data = f 
 
     return f
 
@@ -330,7 +322,7 @@ def process_image(filename, r, R, r1, r2, t):
 
         # determine local maxima
         tmp = loadmat("P.mat")
-        tmp = tmp["P"]
+        tmp = tmp["P"].astype(np.int32)
         P = np.empty((0, 2), int)
         for i in range(tmp.shape[0]):
             sx = tmp[i, 0]
