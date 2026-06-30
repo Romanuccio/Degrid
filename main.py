@@ -50,7 +50,7 @@ class ParameterWidget(QWidget):
 
     @QtCore.pyqtSlot()
     def parameter_lineedit_value_changed(self):
-        self.sender().setStyleSheet("color: rgb(0, 0, 0);")
+        self.sender().setStyleSheet("")
         # changes value of FFPS parameter in dictionary of parameters widget
         value = self.sender().text()
         key = self.sender().key

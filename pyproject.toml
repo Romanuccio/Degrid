@@ -31,3 +31,8 @@ Issues = "https://github.com/Romanuccio/Degrid/issues"
 
 [tool.setuptools]
 py-modules = ["main", "FFPS"]
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.21.0",
+]
