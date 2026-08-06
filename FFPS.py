@@ -25,6 +25,8 @@ class ImageProcessorThread(QThread):
             self.filename, self.r, self.R, self.r1, self.r2, self.t
         )
 
+
+
 def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
     """
     Iteratively adjusts R until the percentage of changed pixels stabilizes.
@@ -314,7 +316,8 @@ def process_image(filename, r, R, r1, r2, t):
         # select subset of data
         data = data[2:1022, 2:1022]
         m, n = data.shape
-        f = median_filter(data, r, R, m, n)
+        
+        f = median_filter(data, r=r, R_init=R)
         F = np.fft.fft2(f)
         F_shift = np.fft.fftshift(F)
 
