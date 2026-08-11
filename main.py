@@ -71,97 +71,117 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.last_drawn_item = None
 
-        # core widget
+        # Core widget
         centralWidget = QWidget(self)
         self.setCentralWidget(centralWidget)
         self.setWindowTitle("Degrid")
-        main_layout = QVBoxLayout()
-        centralWidget.setLayout(main_layout)
+
+        main_layout = QVBoxLayout(centralWidget)
 
         setup_page = QWidget(self)
-        setup_page.setMaximumWidth(1000)
 
-        columns_layout = QHBoxLayout()
+        columns_layout = QHBoxLayout(setup_page)
 
-        # setup page
-        setup_layout = QVBoxLayout()
-        columns_layout.addLayout(setup_layout)
-        # filename list
+        # ============================================================
+        # LEFT COLUMN - setup / parameters
+        # ============================================================
+
+        setup_column = QWidget()
+        setup_column.setMaximumWidth(400)
+
+        setup_layout = QVBoxLayout(setup_column)
+
+        # Filename list
         files_label = QLabel("Files to process:")
-        self.files_to_process_listwidget = QListWidget(self)
+
+        self.files_to_process_listwidget = QListWidget()
         self.files_to_process_listwidget.currentItemChanged.connect(
-            lambda current, previous, listwidget=self.files_to_process_listwidget: self.listwidget_currentItem_Changed(
-                current, previous, listwidget
-            )
+            lambda current, previous:
+                self.listwidget_currentItem_Changed(
+                    current,
+                    previous,
+                    self.files_to_process_listwidget
+                )
         )
         self.files_to_process_listwidget.itemClicked.connect(
             lambda item: self.filelist_currentItem_clicked(item)
         )
-        # processed files list
+
+        # Processed files list
         processed_label = QLabel("Processed files:")
-        self.processed_files_listwidget = QListWidget(self)
+
+        self.processed_files_listwidget = QListWidget()
         self.processed_files_listwidget.currentItemChanged.connect(
-            lambda current, previous, listwidget=self.processed_files_listwidget: self.listwidget_currentItem_Changed(
-                current, previous, listwidget
-            )
+            lambda current, previous:
+                self.listwidget_currentItem_Changed(
+                    current,
+                    previous,
+                    self.processed_files_listwidget
+                )
         )
         self.processed_files_listwidget.itemClicked.connect(
             lambda item: self.filelist_currentItem_clicked(item)
         )
 
-        # files button
-        load_files_button = QPushButton("Add files", self)
-        load_files_button.clicked.connect(self.load_files_button_pressed)
-        # parameter widget
+        # Files button
+        load_files_button = QPushButton("Add files")
+        load_files_button.clicked.connect(
+            self.load_files_button_pressed
+        )
+
+        # Parameter widget
         self.parameter_widget = ParameterWidget()
-        self.parameter_widget.gamma_changed.connect(self.redraw_last_item)
-        # add widgets to page layout
+        self.parameter_widget.gamma_changed.connect(
+            self.redraw_last_item
+        )
+
+        # Add widgets to setup layout
         setup_layout.addWidget(load_files_button)
 
-        # clear files button
-        self.clear_button = QPushButton("Clear files", self)
-        self.clear_button.pressed.connect(self.clear_button_pressed)
+        # Clear files button
+        self.clear_button = QPushButton("Clear files")
+        self.clear_button.pressed.connect(
+            self.clear_button_pressed
+        )
         setup_layout.addWidget(self.clear_button)
 
         setup_layout.addWidget(files_label)
         setup_layout.addWidget(self.files_to_process_listwidget)
+
         setup_layout.addWidget(processed_label)
         setup_layout.addWidget(self.processed_files_listwidget)
+
         setup_layout.addWidget(self.parameter_widget)
 
-        process_progress_VBoxLayout = QVBoxLayout()
+        # Process / progress
+        process_progress_layout = QVBoxLayout()
 
-        self.process_button = QPushButton("Process", self)
-        self.process_button.clicked.connect(self.process_button_pressed)
-        # setup_layout.addWidget(self.process_button)
-        process_progress_VBoxLayout.addWidget(self.process_button)
+        self.process_button = QPushButton("Process")
+        self.process_button.clicked.connect(
+            self.process_button_pressed
+        )
+        process_progress_layout.addWidget(self.process_button)
 
-        # TODO add actual progressing
-        self.progress_bar = QProgressBar(self)
+        self.progress_bar = QProgressBar()
         self.progress_bar.setTextVisible(False)
-        # self.progress_bar.setToolTip("progress")
+        process_progress_layout.addWidget(self.progress_bar)
 
-        # setup_layout.addWidget(self.progress_bar)
-        process_progress_VBoxLayout.addWidget(self.progress_bar)
-        setup_layout.addLayout(process_progress_VBoxLayout)
+        setup_layout.addLayout(process_progress_layout)
 
-        setup_page.setLayout(columns_layout)
+        # Add the LEFT COLUMN widget to the horizontal layout
+        columns_layout.addWidget(setup_column)
 
-        # view page
+        # ============================================================
+        # RIGHT COLUMN - canvas
+        # ============================================================
+
         self.figure = Figure()
         self.canvas = FigureCanvasQTAgg(self.figure)
-        columns_layout.addWidget(self.canvas)
 
-        # view_layout = QVBoxLayout()
-        # label2 = QLabel("Widget in Tab 2.")
-        # view_layout.addWidget(label2)
-        # view_page.setLayout(view_layout)
+        # Stretch factor = 1, so canvas takes remaining space
+        columns_layout.addWidget(self.canvas, 1)
 
-        # create tab widget
-        # tabwidget = QTabWidget(self)
-        # tabwidget.addTab(setup_page, "Setup")
-        # tabwidget.addTab(view_page, "Viewer")
-
+        # Add whole page to main layout
         main_layout.addWidget(setup_page)
 
     @QtCore.pyqtSlot()

@@ -5,6 +5,7 @@ import numpy as np
 from scipy import ndimage
 from pathlib import Path
 
+epsilon = 1e-9
 
 class ImageProcessorThread(QThread):
     def __init__(self, r, R, r1, r2, t, filename):
@@ -39,13 +40,12 @@ def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
     R = R_init
     prev_change_pct = 100.0
     
-    for iteration in range(max_iter):
+    for _ in range(max_iter):
         # 1. Calculate Median (Vectorized)
         window_size = 2 * r + 1
         med_filtered = ndimage.median_filter(data, size=window_size, mode='reflect')
         
         # 2. Calculate Mask
-        epsilon = 1e-9
         ratio = data / (med_filtered + epsilon)
         mask = ratio > R
         
@@ -75,58 +75,6 @@ def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
         prev_change_pct = change_pct
 
     return f
-
-
-# def median_filter(data, r, R, m, n):
-    # f = np.empty_like(data)
-    # k = 0
-
-    # while True:
-    #     for i in range(m):
-    #         for j in range(n):
-    #             # edge cases
-    #             if i < r:
-    #                 i_start = 0
-    #                 i_end = i + r + 1
-    #             elif i >= m - r:
-    #                 i_start = i - r
-    #                 i_end = m
-    #             else:
-    #                 i_start = i - r
-    #                 i_end = i + r + 1
-
-    #             if j < r:
-    #                 j_start = 0
-    #                 j_end = j + r + 1
-    #             elif j >= n - r:
-    #                 j_start = j - r
-    #                 j_end = n
-    #             else:
-    #                 j_start = j - r
-    #                 j_end = j + r + 1
-
-    #             # median
-    #             filter_submatrix = data[i_start:i_end, j_start:j_end]
-    #             med = np.median(filter_submatrix)
-
-    #             # R condition
-    #             # if (not np.isclose(med, 0.)) and (data[i, j] / med > R):
-    #             if data[i, j] / ( med + 1e-9) > R:
-    #                 f[i, j] = med
-    #                 k += 1
-    #             else:
-    #                 f[i, j] = data[i, j]
-
-    #     cond = k / m / n * 100
-
-    #     if cond < 0.5:
-    #         return f
-    #     elif cond > 1:
-    #         R += 0.01
-    #         k = 0
-    #     else:
-    #         R += 0.005
-    #         k = 0
 
 
 def rescale(f):
@@ -315,7 +263,6 @@ def process_image(filename, r, R, r1, r2, t):
 
         # select subset of data
         data = data[2:1022, 2:1022]
-        m, n = data.shape
         
         f = median_filter(data, r=r, R_init=R)
         F = np.fft.fft2(f)
@@ -324,8 +271,7 @@ def process_image(filename, r, R, r1, r2, t):
         A_shift = np.abs(F_shift)
 
         # determine local maxima
-        tmp = loadmat("P.mat")
-        tmp = tmp["P"].astype(np.int32)
+        tmp = loadmat("P.mat")["P"].astype(np.int32)
         P = np.empty((0, 2), int)
         for i in range(tmp.shape[0]):
             sx = tmp[i, 0]
@@ -344,21 +290,28 @@ def process_image(filename, r, R, r1, r2, t):
         # Filtering
         A_shift_filtered = frequency_filter(A_shift, P, r1, r2, t)
 
-        # weight function
-        H = A_shift_filtered / A_shift
+        # weight function (H_p in article)
+        H = A_shift_filtered / (A_shift + epsilon)
 
         # weight function mirrorring
-        for i in range(m):
-            for j in range(n - i):
-                H[m - i - 1, n - j - 1] = H[i, j]
+        N = H.shape[0]
+
+        if N % 2 == 0:
+            W = H + H[::-1, ::-1] - 1
+
+            # ξ = 0 or η = 0
+            W[0, :] = H[0, :]
+            W[:, 0] = H[:, 0]
+
+        else:
+            W = H + H[::-1, ::-1] - 1
 
         # Fourier spectrum filtering
-        G_shift = F_shift * H
+        G_shift = F_shift * W
 
         # inverse Fourier transform
         G = np.fft.ifftshift(G_shift)
         g = np.fft.ifft2(G)
-        # g = rescale(np.real(g))
         g = rescale(np.abs(g))
 
         return g
