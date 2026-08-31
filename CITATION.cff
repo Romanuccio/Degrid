@@ -17,7 +17,7 @@ authors:
 repository-code: "https://github.com/Romanuccio/Degrid"
 url: "https://github.com/Romanuccio/Degrid"
 license: BSD-2-Clause
-version: 0.1.0
+version: 0.1.5
 abstract: >
   PyQt6 desktop application for processing images from SOHO EIT. Input files are FITS files level 0. The application removes impulse noise and periodic noise (square/rectangular grid). This script was created as a part of article "Removal of the Mesh Grid in SOHO EIT Solar Images with a Notch Filter" in the Astrophysical Journal Supplement Series. It explains and derives the mathematical calculations contained therein.
 doi: 10.5281/zenodo.19253611
