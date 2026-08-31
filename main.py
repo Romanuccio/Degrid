@@ -30,6 +30,7 @@ class ParameterWidget(QWidget):
             "r1": 10,
             "r2": 15,
             "t": 1.0,
+            "n (pixels replaced, in percent)": 0.3
         }
 
         layout = QVBoxLayout()
@@ -265,6 +266,7 @@ class MainWindow(QMainWindow):
             r1 = self.parameter_widget.parameters["r1"]
             r2 = self.parameter_widget.parameters["r2"]
             t = self.parameter_widget.parameters["t"]
+            n = self.parameter_widget.parameters["n (pixels replaced, in percent)"]
         except ValueError:
             error_dialog = QErrorMessage()
             error_dialog.showMessage("Invalid parameters.")
@@ -285,7 +287,7 @@ class MainWindow(QMainWindow):
         self.process_button.setText("Processing...")
         # create image processing thread
         filename = self.files_to_process.pop(0)
-        self.image_processor = ImageProcessorThread(r, R, r1, r2, t, filename)
+        self.image_processor = ImageProcessorThread(r, R, r1, r2, t, filename, n)
         self.image_processor.finished.connect(self.image_processer_finished)
         self.image_processor.start()
 

@@ -8,13 +8,14 @@ from pathlib import Path
 epsilon = 1e-9
 
 class ImageProcessorThread(QThread):
-    def __init__(self, r, R, r1, r2, t, filename):
+    def __init__(self, r, R, r1, r2, t, filename, n):
         super().__init__()
         self.r = r
         self.R = R
         self.r1 = r1
         self.r2 = r2
         self.t = t
+        self.n = n
         self.filename = filename
         self.saved_filepath = ''
 
@@ -23,22 +24,22 @@ class ImageProcessorThread(QThread):
 
     def run(self):
         self.saved_filepath = process_image_and_save(
-            self.filename, self.r, self.R, self.r1, self.r2, self.t
+            self.filename, self.r, self.R, self.r1, self.r2, self.t, self.n
         )
 
 
 
-def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
+def median_filter(data, r, R_init, n, max_iter=100):
     """
     Iteratively adjusts R until the percentage of changed pixels stabilizes.
     Optimized using vectorization.
     """
     data = data.astype(np.float64)
-    m, n = data.shape
-    total_pixels = m * n
+    W, H = data.shape
+    total_pixels = W * H
     
     R = R_init
-    prev_change_pct = 100.0
+    # prev_change_pct = 100.0
     
     for _ in range(max_iter):
         # 1. Calculate Median (Vectorized)
@@ -56,13 +57,9 @@ def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
         # 4. Calculate Change Percentage
         num_changed = np.count_nonzero(mask)
         change_pct = (num_changed / total_pixels) * 100
-        
-        # 5. Convergence Logic
-        if abs(change_pct - prev_change_pct) < tol_change:
-            return f
             
         # Adjust R based on logic similar to your original code
-        if change_pct < 0.5:
+        if change_pct < n:
             # Too few changes? Maybe R is too high, or we are done.
             return f
         elif change_pct > 1.0:
@@ -72,7 +69,7 @@ def median_filter(data, r, R_init, max_iter=50, tol_change=0.5):
             # In between? Slight increase.
             R += 0.005
             
-        prev_change_pct = change_pct
+        # prev_change_pct = change_pct
 
     return f
 
@@ -243,8 +240,8 @@ def frequency_filter(A_shift, P, r1, r2, t):
     return A_shift_filtered
 
 
-def process_image_and_save(filename, r, R, r1, r2, t):
-    processed_image = process_image(filename, r, R, r1, r2, t)
+def process_image_and_save(filename, r, R, r1, r2, t, n):
+    processed_image = process_image(filename, r, R, r1, r2, t, n)
     hdu = fits.PrimaryHDU(processed_image)
     # make folder for processed files if it does not exist
     directory_path = Path.joinpath(Path.cwd(), Path("ProcessedImages"))
@@ -256,15 +253,19 @@ def process_image_and_save(filename, r, R, r1, r2, t):
     return save_filepath
 
 
-def process_image(filename, r, R, r1, r2, t):
+def process_image(filename, r, R, r1, r2, t, n):
     """Reads and processes an image."""
     with fits.open(filename) as hdul:
         data = hdul[0].data
 
         # select subset of data
         data = data[2:1022, 2:1022]
-        
-        f = median_filter(data, r=r, R_init=R)
+
+        if (n != 0.):
+            f = median_filter(data, r=r, R_init=R, n=n)
+        else:
+            f = data
+
         F = np.fft.fft2(f)
         F_shift = np.fft.fftshift(F)
 
