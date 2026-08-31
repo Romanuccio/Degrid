@@ -63,7 +63,8 @@ jobs:
               "Byrtus, Roman": "ProjectMember",
               "Druckmüllerová, Hana": "Researcher",
               "Habbal, Shadia": "Researcher",
-              "Satýnek, Daniel": "Researcher"
+              "Satýnek, Daniel": "Researcher",
+              "Alzate, Nathalia": "Researcher"
           }
 
           with open(".zenodo.json") as f:
