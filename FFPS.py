@@ -25,29 +25,55 @@ def _degrid_version():
         return "unknown"
 
 
+_DG_RULE = "-" * 60
+_DG_TITLE = "Degrid processing settings (github.com/Romanuccio/Degrid)"
+_DG_PARAMS = {
+    "r": ("DGMEDR", "Median filter: inner radius r"),
+    "R": ("DGMEDR0", "Median filter: initial outer radius R"),
+    "n": ("DGNOISE", "Median filter: noise threshold n (0 = off)"),
+    "r1": ("DGR1", "Frequency filter: radius r1"),
+    "r2": ("DGR2", "Frequency filter: radius r2"),
+    "t": ("DGT", "Frequency filter: parameter t"),
+}
+
+
 def add_settings_to_header(header, mode, source, **params):
-    """Store the processing settings in the FITS header (DG* keywords + HISTORY)."""
+    """Append a block with the processing settings to the FITS header.
+
+    The block (framed by COMMENT rules) holds DG* keywords and is followed by a
+    one-line HISTORY summary. An older Degrid block, e.g. from re-processing a
+    Degrid output, is replaced rather than duplicated.
+    """
     from datetime import datetime, timezone
-    comments = {
-        "r": ("DGMEDR", "median filter: inner radius r"),
-        "R": ("DGMEDR0", "median filter: initial outer radius R"),
-        "n": ("DGNOISE", "median filter: noise threshold n (0 = off)"),
-        "r1": ("DGR1", "frequency filter: radius r1"),
-        "r2": ("DGR2", "frequency filter: radius r2"),
-        "t": ("DGT", "frequency filter: parameter t"),
-    }
-    header["DGVER"] = (_degrid_version(), "Degrid version")
-    header["DGDATE"] = (
-        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
-        "Degrid processing date (UTC)",
-    )
-    header["DGMODE"] = (mode, "Degrid processing mode")
-    header["DGSRC"] = (Path(source).name, "Degrid input file")
-    for name, value in params.items():
-        key, comment = comments[name]
-        header[key.upper()] = (value, comment)
+
+    # drop a previous Degrid block
+    for key in [k for k in header.keys() if k.startswith("DG")]:
+        header.remove(key, ignore_missing=True, remove_all=True)
+    if "COMMENT" in header:
+        old = [c for c in header["COMMENT"] if c not in (_DG_RULE, _DG_TITLE)]
+        header.remove("COMMENT", remove_all=True)
+        for c in old:
+            header.add_comment(c)
+
+    version = _degrid_version()
+    cards = [
+        ("DGVER", version, "Degrid version"),
+        ("DGDATE", datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+         "Processing date (UTC)"),
+        ("DGMODE", mode, "Mode: degrid | noise_only"),
+        ("DGSRC", Path(source).name, "Input file"),
+    ]
+    cards += [(_DG_PARAMS[k][0], v, _DG_PARAMS[k][1]) for k, v in params.items()]
+
+    header.append(("COMMENT", _DG_RULE), end=True)
+    header.append(("COMMENT", _DG_TITLE), end=True)
+    header.append(("COMMENT", _DG_RULE), end=True)
+    for card in cards:
+        header.append(card, end=True)
+    header.append(("COMMENT", _DG_RULE), end=True)
+
     settings = ", ".join(f"{k}={v}" for k, v in params.items())
-    header.add_history(f"Degrid {_degrid_version()} ({mode}): {settings}")
+    header.add_history(f"Degrid {version} ({mode}): {settings}")
     return header
 
 
