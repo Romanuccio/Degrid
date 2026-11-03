@@ -4,12 +4,57 @@ from PyQt6.QtCore import QThread
 import numpy as np
 from scipy import ndimage
 from pathlib import Path
+import re
 
 epsilon = 1e-9
 
+
+def _p_mat_path():
+    """P.mat next to the working directory, else the one bundled by PyInstaller."""
+    import sys
+    local = Path.cwd() / "P.mat"
+    if local.exists():
+        return local
+    return Path(getattr(sys, "_MEIPASS", Path(__file__).parent)) / "P.mat"
+
+def _degrid_version():
+    try:
+        from importlib.metadata import version
+        return version("degrid")
+    except Exception:
+        return "unknown"
+
+
+def add_settings_to_header(header, mode, source, **params):
+    """Store the processing settings in the FITS header (DG* keywords + HISTORY)."""
+    from datetime import datetime, timezone
+    comments = {
+        "r": ("DGMEDR", "median filter: inner radius r"),
+        "R": ("DGMEDR0", "median filter: initial outer radius R"),
+        "n": ("DGNOISE", "median filter: noise threshold n (0 = off)"),
+        "r1": ("DGR1", "frequency filter: radius r1"),
+        "r2": ("DGR2", "frequency filter: radius r2"),
+        "t": ("DGT", "frequency filter: parameter t"),
+    }
+    header["DGVER"] = (_degrid_version(), "Degrid version")
+    header["DGDATE"] = (
+        datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+        "Degrid processing date (UTC)",
+    )
+    header["DGMODE"] = (mode, "Degrid processing mode")
+    header["DGSRC"] = (Path(source).name, "Degrid input file")
+    for name, value in params.items():
+        key, comment = comments[name]
+        header[key.upper()] = (value, comment)
+    settings = ", ".join(f"{k}={v}" for k, v in params.items())
+    header.add_history(f"Degrid {_degrid_version()} ({mode}): {settings}")
+    return header
+
+
 class ImageProcessorThread(QThread):
-    def __init__(self, r, R, r1, r2, t, filename, n):
+    def __init__(self, r, R, r1, r2, t, filename, n, noise_only=False):
         super().__init__()
+        self.noise_only = noise_only
         self.r = r
         self.R = R
         self.r1 = r1
@@ -23,6 +68,11 @@ class ImageProcessorThread(QThread):
         self.filename = filename
 
     def run(self):
+        if self.noise_only:
+            self.saved_filepath = noise_only_and_save(
+                self.filename, self.r, self.R, self.n
+            )
+            return
         self.saved_filepath = process_image_and_save(
             self.filename, self.r, self.R, self.r1, self.r2, self.t, self.n
         )
@@ -240,9 +290,59 @@ def frequency_filter(A_shift, P, r1, r2, t):
     return A_shift_filtered
 
 
+def remove_impulse_noise(data, r, R, n, crop=True):
+    """Impulse noise removal only (no degridding, no rescaling).
+
+    Uses exactly the same steps as the beginning of `process_image`: crop of the
+    2 edge rows/columns (only for 1024x1024 input) and `median_filter`.
+    Output is float64 in the original intensity units.
+    """
+    if crop and data.shape == (1024, 1024):
+        data = data[2:1022, 2:1022]
+    data = data.astype(np.float64)
+    if n != 0.:
+        return median_filter(data, r=r, R_init=R, n=n)
+    return data
+
+
+def noise_only_and_save(filename, r, R, n):
+    with fits.open(filename) as hdul:
+        data = hdul[0].data
+        header = hdul[0].header.copy()
+
+    cropped = data.shape == (1024, 1024)  # remove_impulse_noise crops only these
+    processed_image = remove_impulse_noise(data, r, R, n)
+
+    if cropped:
+        # the crop drops 2 pixels at the start of each axis, so the reference
+        # pixel (primary and any alternate WCS: CRPIX1, CRPIX1A, ...) moves by 2
+        for key in list(header.keys()):
+            if re.fullmatch(r"CRPIX[12][A-Z]?", key):
+                header[key] = header[key] - 2
+
+    # drop keywords describing the original data layout; astropy sets them anew
+    for key in ("BSCALE", "BZERO", "BLANK", "DATAMIN", "DATAMAX"):
+        header.remove(key, ignore_missing=True, remove_all=True)
+    add_settings_to_header(header, "noise_only", filename, r=r, R=R, n=n)
+    if cropped:
+        header.add_history("Degrid: edges cropped 2:1022 (CRPIX shifted by -2), grid kept")
+    else:
+        header.add_history("Degrid: no crop, grid kept")
+    hdu = fits.PrimaryHDU(processed_image, header=header)
+
+    directory_path = Path.joinpath(Path.cwd(), Path("ProcessedImages"))
+    directory_path.mkdir(exist_ok=True)
+    save_filepath = directory_path.joinpath(Path(filename).stem + "_noiseonly.fits")
+    hdu.writeto(save_filepath, overwrite=True, output_verify="silentfix")
+    return save_filepath
+
+
 def process_image_and_save(filename, r, R, r1, r2, t, n):
     processed_image = process_image(filename, r, R, r1, r2, t, n)
     hdu = fits.PrimaryHDU(processed_image)
+    add_settings_to_header(
+        hdu.header, "degrid", filename, r=r, R=R, n=n, r1=r1, r2=r2, t=t
+    )
     # make folder for processed files if it does not exist
     directory_path = Path.joinpath(Path.cwd(), Path("ProcessedImages"))
     directory_path.mkdir(exist_ok=True)
@@ -272,7 +372,7 @@ def process_image(filename, r, R, r1, r2, t, n):
         A_shift = np.abs(F_shift)
 
         # determine local maxima
-        tmp = loadmat("P.mat")["P"].astype(np.int32)
+        tmp = loadmat(_p_mat_path())["P"].astype(np.int32)
         P = np.empty((0, 2), int)
         for i in range(tmp.shape[0]):
             sx = tmp[i, 0]

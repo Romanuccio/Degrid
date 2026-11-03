@@ -154,6 +154,13 @@ class MainWindow(QMainWindow):
 
         setup_layout.addWidget(self.parameter_widget)
 
+        self.noise_only_checkbox = QCheckBox("Remove impulse noise only")
+        self.noise_only_checkbox.setToolTip(
+            "Only the median-filter impulse noise removal (r, R, n) is applied; "
+            "no degridding, no rescaling. Output: *_noiseonly.fits"
+        )
+        setup_layout.addWidget(self.noise_only_checkbox)
+
         # Process / progress
         process_progress_layout = QVBoxLayout()
 
@@ -287,7 +294,10 @@ class MainWindow(QMainWindow):
         self.process_button.setText("Processing...")
         # create image processing thread
         filename = self.files_to_process.pop(0)
-        self.image_processor = ImageProcessorThread(r, R, r1, r2, t, filename, n)
+        noise_only = self.noise_only_checkbox.isChecked()
+        self.image_processor = ImageProcessorThread(
+            r, R, r1, r2, t, filename, n, noise_only=noise_only
+        )
         self.image_processor.finished.connect(self.image_processer_finished)
         self.image_processor.start()
 
