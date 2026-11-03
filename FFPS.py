@@ -28,9 +28,9 @@ def _degrid_version():
 _DG_RULE = "-" * 60
 _DG_TITLE = "Degrid processing settings (github.com/Romanuccio/Degrid)"
 _DG_PARAMS = {
-    "r": ("DGMEDR", "Median filter: inner radius r"),
-    "R": ("DGMEDR0", "Median filter: initial outer radius R"),
-    "n": ("DGNOISE", "Median filter: noise threshold n (0 = off)"),
+    "r": ("DGMEDR", "Median filter: half-size r (window 2r+1 px)"),
+    "R": ("DGMEDR0", "Median filter: initial ratio threshold R"),
+    "n": ("DGNOISE", "Median filter: stop below n % replaced (0=off)"),
     "r1": ("DGR1", "Frequency filter: radius r1"),
     "r2": ("DGR2", "Frequency filter: radius r2"),
     "t": ("DGT", "Frequency filter: parameter t"),
