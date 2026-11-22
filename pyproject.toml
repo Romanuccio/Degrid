@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "degrid"
-version = "0.1.4"
+version = "0.2.0"
 description = "PyQt6 desktop application for processing and visualizing FITS astronomy images."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,8 @@ authors = [
   { name = "Roman Byrtus" },
   { name = "Daniel Satýnek" },
   { name = "Hana Druckmüllerová" },
-  { name = "Shadia Habbal" }
+  { name = "Shadia Habbal" },
+  { name = "Nathalia Alzate" }
 ]
 license = { text = "BSD-2-Clause" }  # replace if you choose a different license
 keywords = ["astronomy", "fits", "image processing", "pyqt", "gui"]
