@@ -89,19 +89,29 @@ class ImageProcessorThread(QThread):
         self.n = n
         self.filename = filename
         self.saved_filepath = ''
+        self.error = None
 
     def set_file(self, filename):
         self.filename = filename
 
     def run(self):
-        if self.noise_only:
-            self.saved_filepath = noise_only_and_save(
-                self.filename, self.r, self.R, self.n
-            )
-            return
-        self.saved_filepath = process_image_and_save(
-            self.filename, self.r, self.R, self.r1, self.r2, self.t, self.n
-        )
+        # an exception escaping a QThread aborts the whole application,
+        # so keep it and let the GUI report it instead
+        self.error = None
+        self.saved_filepath = ''
+        try:
+            if self.noise_only:
+                self.saved_filepath = noise_only_and_save(
+                    self.filename, self.r, self.R, self.n
+                )
+            else:
+                self.saved_filepath = process_image_and_save(
+                    self.filename, self.r, self.R, self.r1, self.r2, self.t, self.n
+                )
+        except Exception as exc:
+            import traceback
+            traceback.print_exc()
+            self.error = f"{Path(self.filename).name}: {type(exc).__name__}: {exc}"
 
 
 
@@ -110,20 +120,21 @@ def median_filter(data, r, R_init, n, max_iter=100):
     Iteratively adjusts R until the percentage of changed pixels stabilizes.
     Optimized using vectorization.
     """
+    r = int(r)  # the window size must be an integer (GUI values may be floats)
     data = data.astype(np.float64)
     W, H = data.shape
     total_pixels = W * H
     
     R = R_init
     # prev_change_pct = 100.0
-    
+
+    # 1. Calculate Median (Vectorized) - it does not depend on R, so once
+    window_size = 2 * r + 1
+    med_filtered = ndimage.median_filter(data, size=window_size, mode='reflect')
+    ratio = data / (med_filtered + epsilon)
+
     for _ in range(max_iter):
-        # 1. Calculate Median (Vectorized)
-        window_size = 2 * r + 1
-        med_filtered = ndimage.median_filter(data, size=window_size, mode='reflect')
-        
         # 2. Calculate Mask
-        ratio = data / (med_filtered + epsilon)
         mask = ratio > R
         
         # 3. Apply Update
@@ -331,14 +342,8 @@ def remove_impulse_noise(data, r, R, n, crop=True):
     return data
 
 
-def noise_only_and_save(filename, r, R, n):
-    with fits.open(filename) as hdul:
-        data = hdul[0].data
-        header = hdul[0].header.copy()
-
-    cropped = data.shape == (1024, 1024)  # remove_impulse_noise crops only these
-    processed_image = remove_impulse_noise(data, r, R, n)
-
+def _adapt_input_header(header, cropped, rescaled=False):
+    """Make a copy of the input header valid for the processed data (in place)."""
     if cropped:
         # the crop drops 2 pixels at the start of each axis, so the reference
         # pixel (primary and any alternate WCS: CRPIX1, CRPIX1A, ...) moves by 2
@@ -349,6 +354,21 @@ def noise_only_and_save(filename, r, R, n):
     # drop keywords describing the original data layout; astropy sets them anew
     for key in ("BSCALE", "BZERO", "BLANK", "DATAMIN", "DATAMAX"):
         header.remove(key, ignore_missing=True, remove_all=True)
+    if rescaled:
+        # intensities are rescaled to 0..1, so the original unit no longer applies
+        header.remove("BUNIT", ignore_missing=True, remove_all=True)
+    return header
+
+
+def noise_only_and_save(filename, r, R, n):
+    with fits.open(filename) as hdul:
+        data = hdul[0].data
+        header = hdul[0].header.copy()
+
+    cropped = data.shape == (1024, 1024)  # remove_impulse_noise crops only these
+    processed_image = remove_impulse_noise(data, r, R, n)
+
+    _adapt_input_header(header, cropped)
     add_settings_to_header(header, "noise_only", filename, r=r, R=R, n=n)
     if cropped:
         header.add_history("Degrid: edges cropped 2:1022 (CRPIX shifted by -2), grid kept")
@@ -365,17 +385,22 @@ def noise_only_and_save(filename, r, R, n):
 
 def process_image_and_save(filename, r, R, r1, r2, t, n):
     processed_image = process_image(filename, r, R, r1, r2, t, n)
-    hdu = fits.PrimaryHDU(processed_image)
+    # keep the original header (WCS, observation metadata); process_image
+    # always crops the 1024x1024 input to 2:1022 and rescales to 0..1
+    header = fits.getheader(filename).copy()
+    _adapt_input_header(header, cropped=True, rescaled=True)
     add_settings_to_header(
-        hdu.header, "degrid", filename, r=r, R=R, n=n, r1=r1, r2=r2, t=t
+        header, "degrid", filename, r=r, R=R, n=n, r1=r1, r2=r2, t=t
     )
+    header.add_history("Degrid: cropped 2:1022 (CRPIX -2), rescaled to 0..1")
+    hdu = fits.PrimaryHDU(processed_image, header=header)
     # make folder for processed files if it does not exist
     directory_path = Path.joinpath(Path.cwd(), Path("ProcessedImages"))
     directory_path.mkdir(exist_ok=True)
     filename = Path(filename).stem
     
     save_filepath = directory_path.joinpath(filename + "_processed.fits")
-    hdu.writeto(save_filepath, overwrite=True)
+    hdu.writeto(save_filepath, overwrite=True, output_verify="silentfix")
     return save_filepath
 
 
@@ -383,6 +408,11 @@ def process_image(filename, r, R, r1, r2, t, n):
     """Reads and processes an image."""
     with fits.open(filename) as hdul:
         data = hdul[0].data
+        if data is None or data.shape != (1024, 1024):
+            shape = None if data is None else data.shape
+            raise ValueError(
+                f"degridding needs a 1024x1024 image in the primary HDU, got {shape}"
+            )
 
         # select subset of data
         data = data[2:1022, 2:1022]

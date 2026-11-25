@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import *
 import PyQt6.QtCore as QtCore
 import matplotlib
 import pathlib
+import traceback
+import numpy as np
 
 matplotlib.use("QtAgg")
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
@@ -33,6 +35,9 @@ class ParameterWidget(QWidget):
             "n (pixels replaced, in percent)": 0.3
         }
 
+        # keys whose field currently holds text that is not a valid value
+        self.invalid_keys = set()
+
         layout = QVBoxLayout()
         self.setLayout(layout)
         self.value_lineedit_lambdas = []
@@ -58,11 +63,23 @@ class ParameterWidget(QWidget):
         
         try:
             parsed = float(value)
+            if not np.isfinite(parsed):
+                raise ValueError
+            if key == "r":
+                # window half-size must be a non-negative whole number
+                if not parsed.is_integer() or parsed < 0:
+                    raise ValueError
+                parsed = int(parsed)
+            elif key == "gamma" and parsed <= 0:
+                # gamma correction computes f ** (1 / gamma)
+                raise ValueError
             self.parameters[key] = parsed
+            self.invalid_keys.discard(key)
         except ValueError:
             self.sender().setStyleSheet("color: rgb(255, 0, 0);")
+            self.invalid_keys.add(key)
             return
-        
+
         if key == 'gamma':
             self.gamma_changed.emit()
 
@@ -197,6 +214,8 @@ class MainWindow(QMainWindow):
         # clear plot
         self.figure.clear()
         self.canvas.draw()
+        # forget the cleared image so a gamma change does not redraw it
+        self.last_drawn_item = None
         # clear items in file listwidget
         self.files_to_process_listwidget.clear()
 
@@ -264,21 +283,25 @@ class MainWindow(QMainWindow):
 
     @QtCore.pyqtSlot()
     def process_button_pressed(self):
+        # refuse to run with a red (invalid) field instead of silently
+        # using the last valid value it held
+        if self.parameter_widget.invalid_keys:
+            QMessageBox.warning(
+                self,
+                "Invalid parameters",
+                "Fix the parameters marked in red: "
+                + ", ".join(sorted(self.parameter_widget.invalid_keys)),
+            )
+            return
         self.processed_files_listwidget.clear()
         # load parameters
-        try:
-            r = self.parameter_widget.parameters["r"]
-            R = self.parameter_widget.parameters["R"]
-            gamma = self.parameter_widget.parameters["gamma"]
-            r1 = self.parameter_widget.parameters["r1"]
-            r2 = self.parameter_widget.parameters["r2"]
-            t = self.parameter_widget.parameters["t"]
-            n = self.parameter_widget.parameters["n (pixels replaced, in percent)"]
-        except ValueError:
-            error_dialog = QErrorMessage()
-            error_dialog.showMessage("Invalid parameters.")
-            return
-        
+        r = self.parameter_widget.parameters["r"]
+        R = self.parameter_widget.parameters["R"]
+        r1 = self.parameter_widget.parameters["r1"]
+        r2 = self.parameter_widget.parameters["r2"]
+        t = self.parameter_widget.parameters["t"]
+        n = self.parameter_widget.parameters["n (pixels replaced, in percent)"]
+
         # load filepaths
         self.files_to_process = [
             self.files_to_process_listwidget.item(x).text()
@@ -286,6 +309,7 @@ class MainWindow(QMainWindow):
         ]
 
         self.total_files_processing = len(self.files_to_process)
+        self.processing_errors = []
         # file_count = len(files_to_process)
         if len(self.files_to_process) == 0:
             return
@@ -303,10 +327,13 @@ class MainWindow(QMainWindow):
 
     @QtCore.pyqtSlot()
     def image_processer_finished(self):
-        # add processed filename to processed listwidget
-        item = DrawListWidgetItem()
-        item.setText(str(self.image_processor.saved_filepath))
-        self.processed_files_listwidget.addItem(item)
+        if self.image_processor.error is not None:
+            self.processing_errors.append(self.image_processor.error)
+        else:
+            # add processed filename to processed listwidget
+            item = DrawListWidgetItem()
+            item.setText(str(self.image_processor.saved_filepath))
+            self.processed_files_listwidget.addItem(item)
         # amount of remaining files to process
         filecount_left = len(self.files_to_process)
 
@@ -316,6 +343,13 @@ class MainWindow(QMainWindow):
             self.process_button.setEnabled(True)
             del self.image_processor
             self.process_button.setText("Process")
+            if self.processing_errors:
+                QMessageBox.warning(
+                    self,
+                    "Processing failed",
+                    "Some files could not be processed:\n\n"
+                    + "\n".join(self.processing_errors),
+                )
             return
 
         # keep processing
@@ -326,6 +360,18 @@ class MainWindow(QMainWindow):
         self.image_processor.set_file(filename)
         self.image_processor.start()
 
+
+def show_unhandled_exception(exc_type, exc_value, exc_tb):
+    """Report an error in a GUI handler instead of letting PyQt6 abort.
+
+    Without a custom excepthook PyQt6 terminates the application on any
+    unhandled exception in a slot, so the window just disappears.
+    """
+    traceback.print_exception(exc_type, exc_value, exc_tb)
+    QMessageBox.critical(None, "Error", f"{exc_type.__name__}: {exc_value}")
+
+
+sys.excepthook = show_unhandled_exception
 
 # create the QApplication
 app = QApplication([])
