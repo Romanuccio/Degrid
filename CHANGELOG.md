@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-25
 - Fixed degridding to match the original MATLAB implementation; processed images differ slightly from 0.2.0 and the grid is suppressed noticeably better:
   - grid peak positions from P.mat are now refined to the local maximum within 10 px (the search never ran) and read as 1-based MATLAB indices
   - the weight function is mirrored through the zero frequency correctly (it was one pixel off), so the filtered image is real
