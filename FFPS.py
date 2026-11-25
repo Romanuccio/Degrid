@@ -428,7 +428,9 @@ def process_image(filename, r, R, r1, r2, t, n):
         A_shift = np.abs(F_shift)
 
         # determine local maxima
-        tmp = loadmat(_p_mat_path())["P"].astype(np.int32)
+        # P.mat holds approximate peak positions as 1-based MATLAB indices;
+        # each is moved to the highest amplitude within a radius of 10 px
+        tmp = loadmat(_p_mat_path())["P"].astype(np.int32) - 1
         P = np.empty((0, 2), int)
         for i in range(tmp.shape[0]):
             sx = tmp[i, 0]
@@ -436,8 +438,8 @@ def process_image(filename, r, R, r1, r2, t, n):
             value = A_shift[sx, sy]
             a = sx
             b = sy
-            for j in range(-10, 11):
-                for k in range(-10, 11):
+            for j in range(sx - 10, sx + 11):
+                for k in range(sy - 10, sy + 11):
                     if (j - sx) ** 2 + (k - sy) ** 2 < 100 and A_shift[j, k] > value:
                         value = A_shift[j, k]
                         a = j
@@ -450,17 +452,23 @@ def process_image(filename, r, R, r1, r2, t, n):
         # weight function (H_p in article)
         H = A_shift_filtered / (A_shift + epsilon)
 
-        # weight function mirrorring
+        # weight function mirroring: P covers only one of each pair of
+        # conjugate-symmetric peaks, so the weights are mirrored through the
+        # zero frequency to filter the other one too (keeps the result real)
         N = H.shape[0]
 
         if N % 2 == 0:
-            W = H + H[::-1, ::-1] - 1
+            # after fftshift the zero frequency is at N/2, so index i pairs
+            # with N - i (not N - 1 - i, which H[::-1] alone would give)
+            H_mirror = np.roll(H[::-1, ::-1], 1, axis=(0, 1))
+            W = H + H_mirror - 1
 
-            # ξ = 0 or η = 0
+            # ξ = 0 or η = 0 (row/column 0 has no mirror partner)
             W[0, :] = H[0, :]
             W[:, 0] = H[:, 0]
 
         else:
+            # odd N: zero frequency at (N - 1)/2, index i pairs with N - 1 - i
             W = H + H[::-1, ::-1] - 1
 
         # Fourier spectrum filtering
@@ -469,6 +477,7 @@ def process_image(filename, r, R, r1, r2, t, n):
         # inverse Fourier transform
         G = np.fft.ifftshift(G_shift)
         g = np.fft.ifft2(G)
-        g = rescale(np.abs(g))
+        # with symmetric weights g is real up to rounding (as in the MATLAB original)
+        g = rescale(np.real(g))
 
         return g
